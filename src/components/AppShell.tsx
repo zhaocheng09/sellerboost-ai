@@ -1,5 +1,5 @@
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { Home, Wand2, Calculator, Package, Settings, Sparkles } from "lucide-react";
+import { Home, Wand2, Calculator, Package, Settings, Sparkles, Zap } from "lucide-react";
 import { useEffect } from "react";
 import { useLocalStorage } from "@/lib/storage";
 import { Toaster } from "@/components/ui/sonner";
@@ -90,6 +90,18 @@ export function AppShell() {
           })}
         </div>
       </nav>
+
+      {/* Floating Quick Generate */}
+      {!path.startsWith("/studio") && (
+        <Link
+          to="/studio"
+          search={{ tab: "caption" }}
+          aria-label="Quick generate caption"
+          className="fixed right-4 bottom-20 md:bottom-6 z-30 h-14 w-14 rounded-full bg-gradient-brand text-brand-foreground flex items-center justify-center shadow-soft hover:scale-105 active:scale-95 transition-transform"
+        >
+          <Zap className="h-6 w-6" />
+        </Link>
+      )}
 
       <Toaster position="top-center" />
     </div>
