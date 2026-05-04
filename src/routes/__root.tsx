@@ -1,4 +1,5 @@
-import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import { Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import { AppShell } from "@/components/AppShell";
 
 import appCss from "../styles.css?url";
 
@@ -29,11 +30,11 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "SellerAI — AI for Malaysian micro-entrepreneurs" },
+      { name: "description", content: "AI captions, posters, profit calculator and stock tracker built for Malaysian home bakers, handcraft sellers and stall owners." },
+      { name: "author", content: "SellerAI" },
+      { property: "og:title", content: "SellerAI — AI Kedai" },
+      { property: "og:description", content: "Your pocket AI assistant: write captions, calculate profit, track stock." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
@@ -65,5 +66,5 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
-  return <Outlet />;
+  return <AppShell />;
 }
