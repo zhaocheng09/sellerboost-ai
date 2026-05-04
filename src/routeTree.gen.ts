@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as StudioRouteImport } from './routes/studio'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as InventoryRouteImport } from './routes/inventory'
 import { Route as CalculatorRouteImport } from './routes/calculator'
 import { Route as IndexRouteImport } from './routes/index'
@@ -17,6 +18,11 @@ import { Route as IndexRouteImport } from './routes/index'
 const StudioRoute = StudioRouteImport.update({
   id: '/studio',
   path: '/studio',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InventoryRoute = InventoryRouteImport.update({
@@ -39,12 +45,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/calculator': typeof CalculatorRoute
   '/inventory': typeof InventoryRoute
+  '/settings': typeof SettingsRoute
   '/studio': typeof StudioRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/calculator': typeof CalculatorRoute
   '/inventory': typeof InventoryRoute
+  '/settings': typeof SettingsRoute
   '/studio': typeof StudioRoute
 }
 export interface FileRoutesById {
@@ -52,20 +60,22 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/calculator': typeof CalculatorRoute
   '/inventory': typeof InventoryRoute
+  '/settings': typeof SettingsRoute
   '/studio': typeof StudioRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/calculator' | '/inventory' | '/studio'
+  fullPaths: '/' | '/calculator' | '/inventory' | '/settings' | '/studio'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/calculator' | '/inventory' | '/studio'
-  id: '__root__' | '/' | '/calculator' | '/inventory' | '/studio'
+  to: '/' | '/calculator' | '/inventory' | '/settings' | '/studio'
+  id: '__root__' | '/' | '/calculator' | '/inventory' | '/settings' | '/studio'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CalculatorRoute: typeof CalculatorRoute
   InventoryRoute: typeof InventoryRoute
+  SettingsRoute: typeof SettingsRoute
   StudioRoute: typeof StudioRoute
 }
 
@@ -76,6 +86,13 @@ declare module '@tanstack/react-router' {
       path: '/studio'
       fullPath: '/studio'
       preLoaderRoute: typeof StudioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/inventory': {
@@ -106,6 +123,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CalculatorRoute: CalculatorRoute,
   InventoryRoute: InventoryRoute,
+  SettingsRoute: SettingsRoute,
   StudioRoute: StudioRoute,
 }
 export const routeTree = rootRouteImport
