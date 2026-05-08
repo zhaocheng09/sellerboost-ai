@@ -389,22 +389,24 @@ function PosterTab() {
 }
 
 function PosterPreview({ style, copy, imgUrl }: { style: PosterStyle; copy: PosterCopy; imgUrl: string | null }) {
-  const base = "relative aspect-[4/5] w-full max-w-sm mx-auto rounded-2xl overflow-hidden shadow-card";
+  const base = "relative aspect-square w-full max-w-sm mx-auto rounded-2xl overflow-hidden shadow-card";
   const photo = imgUrl || "https://images.unsplash.com/photo-1551024601-bec78aea704b?w=600";
 
   if (style === "Minimal Clean") {
     return (
-      <div className={`${base} bg-white text-neutral-900`}>
+      <div className={`${base} text-neutral-900`} style={{ background: "#FAFAF7" }}>
+        <div className="absolute inset-[10px] rounded-xl border border-amber-400/70 pointer-events-none" />
         <div className="absolute inset-0 flex flex-col">
-          <div className="flex-1 overflow-hidden bg-neutral-100">
+          <div className="h-[62%] overflow-hidden bg-neutral-100">
             <img src={photo} alt="" className="w-full h-full object-cover" />
           </div>
-          <div className="p-5">
-            <div className="text-2xl font-bold leading-tight">{copy.headline}</div>
-            {copy.tagline && <div className="text-xs text-neutral-500 mt-1">{copy.tagline}</div>}
+          <div className="flex-1 px-6 py-5 flex flex-col justify-center">
+            <div className="text-[10px] tracking-[0.3em] uppercase text-amber-600 font-semibold">Fresh today</div>
+            <div className="text-2xl font-bold leading-tight mt-1.5 text-neutral-900">{copy.headline}</div>
+            {copy.tagline && <div className="text-xs text-neutral-500 mt-1.5 leading-relaxed">{copy.tagline}</div>}
             <div className="flex items-center justify-between mt-3">
-              {copy.price && <div className="text-lg font-bold">{copy.price}</div>}
-              <div className="text-[10px] tracking-widest uppercase text-neutral-500">{copy.cta}</div>
+              {copy.price && <div className="text-xl font-bold text-neutral-900">{copy.price}</div>}
+              <div className="text-[10px] tracking-widest uppercase text-neutral-700 font-semibold">{copy.cta} →</div>
             </div>
           </div>
         </div>
@@ -413,17 +415,19 @@ function PosterPreview({ style, copy, imgUrl }: { style: PosterStyle; copy: Post
   }
   if (style === "Bold & Bright") {
     return (
-      <div className={`${base}`} style={{ background: "linear-gradient(135deg,#F59E0B,#EF4444)" }}>
+      <div className={`${base}`} style={{ background: "linear-gradient(160deg,#1a0a0a 0%, #2a0f0f 100%)" }}>
         <div className="absolute inset-0 p-5 flex flex-col text-white">
-          <div className="text-[11px] uppercase tracking-widest opacity-90 font-bold">Just dropped</div>
-          <div className="text-4xl font-extrabold mt-2 leading-tight">{copy.headline}</div>
-          <div className="text-sm mt-2 opacity-95">{copy.tagline}</div>
-          <div className="flex-1 my-4 rounded-xl overflow-hidden ring-4 ring-white/30">
+          <div className="text-[11px] uppercase tracking-[0.3em] font-bold text-amber-300/90">Just dropped</div>
+          <div className="flex-1 my-3 rounded-xl overflow-hidden ring-1 ring-white/15 shadow-2xl">
             <img src={photo} alt="" className="w-full h-full object-cover" />
           </div>
-          <div className="flex items-center justify-between">
-            {copy.price && <div className="text-3xl font-extrabold">{copy.price}</div>}
-            <div className="px-4 py-2 rounded-full bg-white text-neutral-900 font-bold text-sm">{copy.cta} →</div>
+          <div>
+            <div className="text-3xl font-extrabold leading-tight">{copy.headline}</div>
+            {copy.tagline && <div className="text-xs mt-1.5 text-white/70">{copy.tagline}</div>}
+            <div className="flex items-center justify-between mt-3">
+              {copy.price && <div className="text-2xl font-extrabold text-amber-300">{copy.price}</div>}
+              <div className="px-4 py-2 rounded-full bg-white text-neutral-900 font-bold text-sm">{copy.cta} →</div>
+            </div>
           </div>
         </div>
       </div>
@@ -431,19 +435,25 @@ function PosterPreview({ style, copy, imgUrl }: { style: PosterStyle; copy: Post
   }
   if (style === "Rustic Handmade") {
     return (
-      <div className={`${base}`} style={{ background: "#F5EFE6" }}>
-        <div className="absolute inset-0 p-6 flex flex-col text-stone-800">
-          <div className="text-center text-[11px] tracking-[0.3em] uppercase">~ Handmade with love ~</div>
-          <div className="my-4 rounded-full overflow-hidden aspect-square mx-auto w-44 ring-4 ring-stone-200">
+      <div
+        className={`${base}`}
+        style={{
+          background:
+            "radial-gradient(circle at 20% 10%, rgba(255,255,255,0.5), transparent 50%), radial-gradient(circle at 80% 90%, rgba(160,120,70,0.18), transparent 55%), #F5ECD7",
+        }}
+      >
+        <div className="absolute inset-0 p-5 flex flex-col text-stone-800">
+          <div className="text-center text-[10px] tracking-[0.4em] uppercase text-stone-600">~ Handmade with love ~</div>
+          <div className="mt-3 h-[58%] rounded-lg overflow-hidden ring-1 ring-stone-300/70 shadow-md">
             <img src={photo} alt="" className="w-full h-full object-cover" />
           </div>
-          <div className="text-center" style={{ fontFamily: "Georgia, serif" }}>
-            <div className="text-3xl italic">{copy.headline}</div>
-            <div className="text-sm text-stone-600 mt-2 px-3">{copy.tagline}</div>
-          </div>
-          <div className="mt-auto text-center">
-            {copy.price && <div className="text-2xl font-bold">{copy.price}</div>}
-            <div className="mt-2 inline-block border border-stone-800 px-4 py-1.5 text-xs uppercase tracking-widest">{copy.cta}</div>
+          <div className="flex-1 flex flex-col justify-center text-center mt-3" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
+            <div className="text-2xl italic text-stone-900 leading-tight">{copy.headline}</div>
+            {copy.tagline && <div className="text-xs text-stone-600 mt-1.5 px-3">{copy.tagline}</div>}
+            <div className="flex items-center justify-center gap-3 mt-2">
+              {copy.price && <div className="text-xl font-bold text-stone-900">{copy.price}</div>}
+              <div className="border border-stone-800 px-3 py-1 text-[10px] uppercase tracking-[0.25em] text-stone-800">{copy.cta}</div>
+            </div>
           </div>
         </div>
       </div>
@@ -451,19 +461,26 @@ function PosterPreview({ style, copy, imgUrl }: { style: PosterStyle; copy: Post
   }
   // Flash Sale
   return (
-    <div className={`${base} bg-neutral-900 text-white`}>
-      <div className="absolute inset-0">
-        <img src={photo} alt="" className="w-full h-full object-cover opacity-40" />
-      </div>
-      <div className="absolute top-4 left-4 px-3 py-1 rounded-full text-[10px] font-bold tracking-widest" style={{ background: "#F59E0B", color: "#111" }}>⚡ FLASH SALE</div>
-      <div className="absolute inset-0 flex flex-col justify-end p-5">
-        <div className="text-5xl font-black leading-none uppercase">{copy.headline}</div>
-        <div className="text-sm mt-2 opacity-90">{copy.tagline}</div>
-        <div className="flex items-end justify-between mt-4">
-          {copy.price && <div className="text-4xl font-black" style={{ color: "#F59E0B" }}>{copy.price}</div>}
-          <div className="px-4 py-2 rounded-md font-bold text-sm" style={{ background: "#F59E0B", color: "#111" }}>{copy.cta}</div>
+    <div className={`${base} text-white`} style={{ background: "#0a0a0a" }}>
+      <div className="absolute inset-0 flex flex-col">
+        <div className="h-[58%] relative overflow-hidden">
+          <img src={photo} alt="" className="w-full h-full object-cover" />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, transparent 50%, #0a0a0a 100%)" }} />
         </div>
-        <div className="text-[10px] mt-3 uppercase tracking-widest opacity-80">Today only · DM to grab yours</div>
+        <div className="flex-1 px-5 py-4 flex flex-col justify-end" style={{ background: "#0a0a0a" }}>
+          <div className="text-3xl font-black leading-none uppercase tracking-tight">{copy.headline}</div>
+          {copy.tagline && <div className="text-xs mt-2 text-white/70">{copy.tagline}</div>}
+          <div className="flex items-end justify-between mt-3">
+            {copy.price && <div className="text-3xl font-black" style={{ color: "#C0392B" }}>{copy.price}</div>}
+            <div className="px-4 py-2 rounded-md font-bold text-xs uppercase tracking-widest" style={{ background: "#C0392B", color: "#fff" }}>{copy.cta}</div>
+          </div>
+        </div>
+      </div>
+      <div
+        className="absolute top-6 -right-10 px-12 py-1.5 text-[11px] font-black tracking-[0.3em] shadow-lg"
+        style={{ background: "#C0392B", color: "#fff", transform: "rotate(35deg)" }}
+      >
+        ⚡ FLASH SALE
       </div>
     </div>
   );
