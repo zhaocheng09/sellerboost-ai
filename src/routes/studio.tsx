@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Copy, RefreshCw, Save, Sparkles, Upload, Download, Hash, MessageCircle } from "lucide-react";
+import html2canvas from "html2canvas-pro";
 import { toast } from "sonner";
 import { z } from "zod";
 import { callAI } from "@/lib/ai";
@@ -274,6 +275,46 @@ type PosterCopy = { headline: string; tagline: string; cta: string; price: strin
 const POSTER_STYLES = ["Minimal Clean", "Bold & Bright", "Rustic Handmade", "Flash Sale"] as const;
 type PosterStyle = (typeof POSTER_STYLES)[number];
 
+const POSTER_LOADING_MSGS = [
+  "Sprinkling some magic on your poster... ✨",
+  "Making your product look irresistible... 🍫",
+  "Professional designer mode: ON 🎨",
+  "Your customers won't be able to scroll past this... 👀",
+];
+
+function usePosterLoadingMsg(loading: boolean) {
+  const [msg, setMsg] = useState(POSTER_LOADING_MSGS[0]);
+  useEffect(() => {
+    if (!loading) return;
+    let i = 0;
+    setMsg(POSTER_LOADING_MSGS[0]);
+    const t = setInterval(() => {
+      i = (i + 1) % POSTER_LOADING_MSGS.length;
+      setMsg(POSTER_LOADING_MSGS[i]);
+    }, 1600);
+    return () => clearInterval(t);
+  }, [loading]);
+  return msg;
+}
+
+/** Pick a deep overlay color based on product keywords. */
+function pickOverlayColor(product: string): { hex: string; rgb: string } {
+  const p = product.toLowerCase();
+  const map: Array<{ keys: string[]; hex: string; rgb: string }> = [
+    { keys: ["chocolate", "brownie", "coffee", "kopi", "mocha", "dark", "cocoa", "tiramisu"], hex: "#1C0A00", rgb: "28,10,0" },
+    { keys: ["matcha", "pandan", "ulam", "mint", "green", "kale", "avocado"], hex: "#0A2010", rgb: "10,32,16" },
+    { keys: ["strawberry", "rose", "ube", "berry", "raspberry", "grape", "purple", "plum"], hex: "#2A0A1F", rgb: "42,10,31" },
+    { keys: ["vanilla", "cream", "butter", "caramel", "honey", "milk", "custard"], hex: "#3A2410", rgb: "58,36,16" },
+    { keys: ["plant", "flower", "succulent", "terrarium", "garden"], hex: "#0A2010", rgb: "10,32,16" },
+    { keys: ["craft", "bag", "leather", "wood", "weave", "knit"], hex: "#0A0A2A", rgb: "10,10,42" },
+  ];
+  for (const m of map) if (m.keys.some((k) => p.includes(k))) return { hex: m.hex, rgb: m.rgb };
+  return { hex: "#1a1a1a", rgb: "26,26,26" };
+}
+
+const NOISE_SVG =
+  "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.5 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/></svg>\")";
+
 function PosterTab() {
   const [profile] = useLocalStorage<BusinessProfile>("sellerai.profile", defaultProfile);
   const [activity, setActivity] = useLocalStorage<ActivityItem[]>("sellerai.activity", []);
@@ -284,8 +325,10 @@ function PosterTab() {
   const [style, setStyle] = useState<PosterStyle>("Minimal Clean");
   const [copy, setCopy] = useState<PosterCopy | null>(null);
   const [loading, setLoading] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const posterRef = useRef<HTMLDivElement>(null);
+  const loadingMsg = usePosterLoadingMsg(loading);
 
   function handleFile(f: File | null) {
     if (!f) return;
@@ -309,16 +352,27 @@ function PosterTab() {
     }
   }
 
-  function downloadAsImage() {
-    // Lightweight: open print dialog scoped to poster
+  async function downloadAsImage() {
     if (!posterRef.current) return;
-    const html = `<html><head><title>poster</title><style>body{margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f5f5f5;font-family:'Plus Jakarta Sans',sans-serif}</style></head><body>${posterRef.current.outerHTML}</body></html>`;
-    const w = window.open("", "_blank");
-    if (!w) return;
-    w.document.write(html);
-    w.document.close();
-    w.focus();
-    setTimeout(() => w.print(), 300);
+    setDownloading(true);
+    try {
+      const canvas = await html2canvas(posterRef.current, {
+        backgroundColor: null,
+        scale: 1, // poster already renders at 1080x1080
+        useCORS: true,
+        logging: false,
+      });
+      const link = document.createElement("a");
+      link.download = `${(product || "poster").replace(/\s+/g, "-").toLowerCase()}-1080.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+      toast.success("Poster downloaded! 🎉");
+    } catch (err) {
+      console.error(err);
+      toast.error("Couldn't capture the poster — try again");
+    } finally {
+      setDownloading(false);
+    }
   }
 
   return (
@@ -373,14 +427,47 @@ function PosterTab() {
         </Button>
       </Card>
 
+      {loading && (
+        <div className="space-y-3">
+          <div className="relative aspect-square w-full max-w-sm mx-auto rounded-2xl overflow-hidden bg-muted">
+            <div className="absolute inset-0 bg-gradient-to-br from-muted via-muted-foreground/10 to-muted animate-pulse" />
+            <div
+              className="absolute inset-0"
+              style={{
+                backgroundImage:
+                  "linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.45) 50%, transparent 70%)",
+                backgroundSize: "200% 100%",
+                animation: "shimmer 1.6s linear infinite",
+              }}
+            />
+            <style>{`@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
+          </div>
+          <p className="text-center text-sm text-muted-foreground italic">{loadingMsg}</p>
+        </div>
+      )}
+
       {copy && (
         <div className="space-y-3">
-          <div ref={posterRef}>
-            <PosterPreview style={style} copy={copy} imgUrl={imgUrl} />
+          {/* Scaled wrapper — actual poster renders at 1080x1080 inside */}
+          <div className="w-full max-w-sm mx-auto">
+            <ScaledPoster ref={posterRef} style={style} copy={copy} imgUrl={imgUrl} product={product} />
           </div>
-          <div className="flex gap-2 flex-wrap">
-            <Button variant="outline" onClick={downloadAsImage}><Download className="h-4 w-4 mr-1.5" /> Download / Print</Button>
+          <div className="flex gap-2 flex-wrap justify-center">
+            <Button onClick={downloadAsImage} disabled={downloading} className="bg-gradient-brand text-brand-foreground hover:opacity-90">
+              <Download className="h-4 w-4 mr-1.5" /> {downloading ? "Saving..." : "Download Poster"}
+            </Button>
             <Button variant="outline" onClick={generate} disabled={loading}><RefreshCw className="h-4 w-4 mr-1.5" /> Regenerate</Button>
+          </div>
+          <div className="pt-2">
+            <div className="text-xs text-center text-muted-foreground mb-2">Try another style</div>
+            <div className="grid grid-cols-4 gap-2 max-w-sm mx-auto">
+              {POSTER_STYLES.map((s) => (
+                <button key={s} type="button" onClick={() => setStyle(s)}
+                  className={`px-2 py-2 text-[11px] leading-tight rounded-lg border transition-all ${style === s ? "bg-brand text-brand-foreground border-brand shadow-soft" : "bg-card border-border hover:bg-muted"}`}>
+                  {s}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -388,102 +475,515 @@ function PosterTab() {
   );
 }
 
-function PosterPreview({ style, copy, imgUrl }: { style: PosterStyle; copy: PosterCopy; imgUrl: string | null }) {
-  const base = "relative aspect-square w-full max-w-sm mx-auto rounded-2xl overflow-hidden shadow-card";
-  const photo = imgUrl || "https://images.unsplash.com/photo-1551024601-bec78aea704b?w=600";
-
-  if (style === "Minimal Clean") {
-    return (
-      <div className={`${base} text-neutral-900`} style={{ background: "#FAFAF7" }}>
-        <div className="absolute inset-[10px] rounded-xl border border-amber-400/70 pointer-events-none" />
-        <div className="absolute inset-0 flex flex-col">
-          <div className="h-[62%] overflow-hidden bg-neutral-100">
-            <img src={photo} alt="" className="w-full h-full object-cover" />
-          </div>
-          <div className="flex-1 px-6 py-5 flex flex-col justify-center">
-            <div className="text-[10px] tracking-[0.3em] uppercase text-amber-600 font-semibold">Fresh today</div>
-            <div className="text-2xl font-bold leading-tight mt-1.5 text-neutral-900">{copy.headline}</div>
-            {copy.tagline && <div className="text-xs text-neutral-500 mt-1.5 leading-relaxed">{copy.tagline}</div>}
-            <div className="flex items-center justify-between mt-3">
-              {copy.price && <div className="text-xl font-bold text-neutral-900">{copy.price}</div>}
-              <div className="text-[10px] tracking-widest uppercase text-neutral-700 font-semibold">{copy.cta} →</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-  if (style === "Bold & Bright") {
-    return (
-      <div className={`${base}`} style={{ background: "linear-gradient(160deg,#1a0a0a 0%, #2a0f0f 100%)" }}>
-        <div className="absolute inset-0 p-5 flex flex-col text-white">
-          <div className="text-[11px] uppercase tracking-[0.3em] font-bold text-amber-300/90">Just dropped</div>
-          <div className="flex-1 my-3 rounded-xl overflow-hidden ring-1 ring-white/15 shadow-2xl">
-            <img src={photo} alt="" className="w-full h-full object-cover" />
-          </div>
-          <div>
-            <div className="text-3xl font-extrabold leading-tight">{copy.headline}</div>
-            {copy.tagline && <div className="text-xs mt-1.5 text-white/70">{copy.tagline}</div>}
-            <div className="flex items-center justify-between mt-3">
-              {copy.price && <div className="text-2xl font-extrabold text-amber-300">{copy.price}</div>}
-              <div className="px-4 py-2 rounded-full bg-white text-neutral-900 font-bold text-sm">{copy.cta} →</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-  if (style === "Rustic Handmade") {
-    return (
-      <div
-        className={`${base}`}
-        style={{
-          background:
-            "radial-gradient(circle at 20% 10%, rgba(255,255,255,0.5), transparent 50%), radial-gradient(circle at 80% 90%, rgba(160,120,70,0.18), transparent 55%), #F5ECD7",
-        }}
-      >
-        <div className="absolute inset-0 p-5 flex flex-col text-stone-800">
-          <div className="text-center text-[10px] tracking-[0.4em] uppercase text-stone-600">~ Handmade with love ~</div>
-          <div className="mt-3 h-[58%] rounded-lg overflow-hidden ring-1 ring-stone-300/70 shadow-md">
-            <img src={photo} alt="" className="w-full h-full object-cover" />
-          </div>
-          <div className="flex-1 flex flex-col justify-center text-center mt-3" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
-            <div className="text-2xl italic text-stone-900 leading-tight">{copy.headline}</div>
-            {copy.tagline && <div className="text-xs text-stone-600 mt-1.5 px-3">{copy.tagline}</div>}
-            <div className="flex items-center justify-center gap-3 mt-2">
-              {copy.price && <div className="text-xl font-bold text-stone-900">{copy.price}</div>}
-              <div className="border border-stone-800 px-3 py-1 text-[10px] uppercase tracking-[0.25em] text-stone-800">{copy.cta}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-  // Flash Sale
+/**
+ * ScaledPoster renders the actual poster at 1080x1080 (so html2canvas captures
+ * full resolution) inside a wrapper that scales it down to fit the preview.
+ */
+const ScaledPoster = ({ style, copy, imgUrl, product, ref }: {
+  style: PosterStyle; copy: PosterCopy; imgUrl: string | null; product: string;
+  ref: React.RefObject<HTMLDivElement | null>;
+}) => {
+  const [scale, setScale] = useState(0.32);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    function update() {
+      const w = wrapRef.current?.clientWidth ?? 360;
+      setScale(w / 1080);
+    }
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
   return (
-    <div className={`${base} text-white`} style={{ background: "#0a0a0a" }}>
-      <div className="absolute inset-0 flex flex-col">
-        <div className="h-[58%] relative overflow-hidden">
-          <img src={photo} alt="" className="w-full h-full object-cover" />
-          <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, transparent 50%, #0a0a0a 100%)" }} />
+    <div ref={wrapRef} className="w-full" style={{ aspectRatio: "1 / 1" }}>
+      <div style={{ width: 1080, height: 1080, transform: `scale(${scale})`, transformOrigin: "top left" }}>
+        <div ref={ref} style={{ width: 1080, height: 1080 }}>
+          <PosterPreview style={style} copy={copy} imgUrl={imgUrl} product={product} />
         </div>
-        <div className="flex-1 px-5 py-4 flex flex-col justify-end" style={{ background: "#0a0a0a" }}>
-          <div className="text-3xl font-black leading-none uppercase tracking-tight">{copy.headline}</div>
-          {copy.tagline && <div className="text-xs mt-2 text-white/70">{copy.tagline}</div>}
-          <div className="flex items-end justify-between mt-3">
-            {copy.price && <div className="text-3xl font-black" style={{ color: "#C0392B" }}>{copy.price}</div>}
-            <div className="px-4 py-2 rounded-md font-bold text-xs uppercase tracking-widest" style={{ background: "#C0392B", color: "#fff" }}>{copy.cta}</div>
-          </div>
-        </div>
-      </div>
-      <div
-        className="absolute top-6 -right-10 px-12 py-1.5 text-[11px] font-black tracking-[0.3em] shadow-lg"
-        style={{ background: "#C0392B", color: "#fff", transform: "rotate(35deg)" }}
-      >
-        ⚡ FLASH SALE
       </div>
     </div>
   );
+};
+
+function PosterPreview({ style, copy, imgUrl, product }: {
+  style: PosterStyle; copy: PosterCopy; imgUrl: string | null; product: string;
+}) {
+  const photo = imgUrl || "https://images.unsplash.com/photo-1551024601-bec78aea704b?w=1200&q=80";
+  const overlay = pickOverlayColor(product || copy.headline);
+
+  // Common wrappers
+  const Frame: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+    <div
+      className="relative overflow-hidden"
+      style={{
+        width: 1080,
+        height: 1080,
+        borderRadius: 16,
+        boxShadow: "inset 0 0 120px rgba(0,0,0,0.45)",
+      }}
+    >
+      {children}
+      {/* Noise grain overlay */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{ backgroundImage: NOISE_SVG, opacity: 0.06, mixBlendMode: "overlay" }}
+      />
+      {/* Edge vignette */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background: "radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.35) 100%)",
+        }}
+      />
+      {/* SellerAI watermark */}
+      <div
+        className="pointer-events-none absolute left-0 right-0 text-center"
+        style={{
+          bottom: 18,
+          color: "rgba(255,255,255,0.45)",
+          fontFamily: "'DM Sans', sans-serif",
+          fontSize: 16,
+          letterSpacing: "0.3em",
+          fontWeight: 600,
+        }}
+      >
+        ✦ SELLERAI
+      </div>
+    </div>
+  );
+
+  const BgPhoto = (
+    <img
+      src={photo}
+      alt=""
+      crossOrigin="anonymous"
+      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+    />
+  );
+
+  if (style === "Minimal Clean") {
+    return (
+      <Frame>
+        {BgPhoto}
+        {/* white-to-transparent gradient from bottom */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 35%, rgba(0,0,0,0.55) 75%, rgba(0,0,0,0.85) 100%)",
+          }}
+        />
+        {/* Top-left watermark */}
+        <div
+          className="absolute"
+          style={{
+            top: 40,
+            left: 48,
+            color: "rgba(255,255,255,0.85)",
+            fontFamily: "'DM Sans', sans-serif",
+            fontSize: 18,
+            letterSpacing: "0.3em",
+            fontWeight: 500,
+            textShadow: "0 2px 12px rgba(0,0,0,0.6)",
+          }}
+        >
+          MADE WITH SELLERAI
+        </div>
+        {/* Bottom content */}
+        <div className="absolute" style={{ left: 56, right: 56, bottom: 88, color: "white" }}>
+          {copy.tagline && (
+            <div
+              style={{
+                fontFamily: "'DM Sans', sans-serif",
+                fontStyle: "italic",
+                fontSize: 26,
+                color: "rgba(255,255,255,0.85)",
+                marginBottom: 18,
+                textShadow: "0 2px 18px rgba(0,0,0,0.7)",
+                maxWidth: "78%",
+              }}
+            >
+              {copy.tagline}
+            </div>
+          )}
+          <div className="flex items-end justify-between gap-6">
+            <div
+              style={{
+                fontFamily: "'DM Sans', sans-serif",
+                fontWeight: 800,
+                fontSize: 96,
+                lineHeight: 0.95,
+                letterSpacing: "-0.03em",
+                textShadow: "0 4px 24px rgba(0,0,0,0.8)",
+                maxWidth: "70%",
+              }}
+            >
+              {copy.headline}
+            </div>
+            {copy.price && (
+              <div
+                style={{
+                  background: "rgba(255,255,255,0.18)",
+                  backdropFilter: "blur(20px)",
+                  WebkitBackdropFilter: "blur(20px)",
+                  border: "1px solid rgba(255,255,255,0.3)",
+                  borderRadius: 999,
+                  padding: "16px 28px",
+                  fontFamily: "'DM Sans', sans-serif",
+                  fontWeight: 700,
+                  fontSize: 30,
+                  color: "white",
+                  whiteSpace: "nowrap",
+                  textShadow: "0 2px 10px rgba(0,0,0,0.5)",
+                }}
+              >
+                {copy.price}
+              </div>
+            )}
+          </div>
+        </div>
+      </Frame>
+    );
+  }
+
+  if (style === "Bold & Bright") {
+    return (
+      <Frame>
+        {BgPhoto}
+        {/* Vignette around edges, center stays bright */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(ellipse at center, rgba(0,0,0,0) 35%, rgba(0,0,0,0.55) 80%, rgba(0,0,0,0.85) 100%)",
+          }}
+        />
+        {/* NEW DROP badge */}
+        <div
+          className="absolute"
+          style={{
+            top: 48,
+            right: 48,
+            background: "#E63946",
+            color: "white",
+            padding: "14px 28px",
+            borderRadius: 999,
+            fontFamily: "'Bebas Neue', sans-serif",
+            fontSize: 28,
+            letterSpacing: "0.25em",
+            boxShadow: "0 8px 24px rgba(230,57,70,0.5)",
+          }}
+        >
+          NEW DROP
+        </div>
+        {/* Diagonal color stripe at bottom */}
+        <div
+          className="absolute"
+          style={{
+            left: -40,
+            right: -40,
+            bottom: 130,
+            height: 280,
+            background: overlay.hex,
+            transform: "skewY(-6deg)",
+            boxShadow: "0 -10px 40px rgba(0,0,0,0.4)",
+          }}
+        />
+        <div
+          className="absolute"
+          style={{ left: 56, right: 56, bottom: 130, color: "white" }}
+        >
+          <div
+            style={{
+              fontFamily: "'Anton', 'Bebas Neue', sans-serif",
+              fontWeight: 900,
+              fontSize: 140,
+              lineHeight: 0.88,
+              textTransform: "uppercase",
+              letterSpacing: "-0.01em",
+              textShadow: "0 6px 24px rgba(0,0,0,0.6)",
+            }}
+          >
+            {copy.headline}
+          </div>
+          {copy.tagline && (
+            <div
+              style={{
+                fontFamily: "'DM Sans', sans-serif",
+                fontWeight: 500,
+                fontSize: 24,
+                color: "rgba(255,255,255,0.85)",
+                marginTop: 12,
+                maxWidth: "85%",
+                textShadow: "0 2px 12px rgba(0,0,0,0.7)",
+              }}
+            >
+              {copy.tagline}
+            </div>
+          )}
+          <div className="flex items-center justify-between" style={{ marginTop: 24 }}>
+            {copy.price && (
+              <div
+                style={{
+                  fontFamily: "'Anton', sans-serif",
+                  fontSize: 84,
+                  color: "#FFD700",
+                  letterSpacing: "-0.01em",
+                  textShadow: "0 4px 16px rgba(0,0,0,0.6)",
+                }}
+              >
+                {copy.price}
+              </div>
+            )}
+            <div
+              style={{
+                background: "#FFD700",
+                color: "#1a1a1a",
+                padding: "20px 36px",
+                borderRadius: 12,
+                fontFamily: "'Bebas Neue', sans-serif",
+                fontSize: 36,
+                letterSpacing: "0.15em",
+                fontWeight: 700,
+                boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+              }}
+            >
+              {copy.cta} →
+            </div>
+          </div>
+        </div>
+      </Frame>
+    );
+  }
+
+  if (style === "Rustic Handmade") {
+    return (
+      <Frame>
+        {BgPhoto}
+        {/* Sepia warm overlay */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(101,67,33,0.25) 0%, rgba(101,67,33,0.45) 60%, rgba(60,40,20,0.7) 100%)",
+          }}
+        />
+        {/* Top label */}
+        <div
+          className="absolute"
+          style={{
+            top: 56,
+            left: 0,
+            right: 0,
+            textAlign: "center",
+            color: "rgba(255,245,225,0.95)",
+            fontFamily: "'Playfair Display', serif",
+            fontStyle: "italic",
+            fontSize: 28,
+            letterSpacing: "0.15em",
+            textShadow: "0 2px 12px rgba(0,0,0,0.6)",
+          }}
+        >
+          ~ handmade with love ~
+        </div>
+        {/* Torn paper band */}
+        <div
+          className="absolute"
+          style={{
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: 420,
+            background: "#F8F0DC",
+            clipPath:
+              "polygon(0 8%, 4% 4%, 9% 9%, 14% 3%, 20% 7%, 26% 2%, 32% 8%, 38% 4%, 44% 9%, 50% 3%, 56% 8%, 62% 4%, 68% 9%, 74% 3%, 80% 7%, 86% 4%, 92% 9%, 96% 5%, 100% 8%, 100% 100%, 0 100%)",
+            boxShadow: "0 -10px 30px rgba(0,0,0,0.25)",
+          }}
+        />
+        {/* Stamped circle */}
+        {copy.price && (
+          <div
+            className="absolute"
+            style={{
+              right: 70,
+              bottom: 290,
+              width: 170,
+              height: 170,
+              borderRadius: "50%",
+              border: "4px double #5C3A1E",
+              color: "#5C3A1E",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              fontFamily: "'Playfair Display', serif",
+              transform: "rotate(-8deg)",
+              background: "rgba(248,240,220,0.85)",
+            }}
+          >
+            <div style={{ fontSize: 14, letterSpacing: "0.3em", marginBottom: 4 }}>ONLY</div>
+            <div style={{ fontSize: 38, fontWeight: 700, lineHeight: 1 }}>{copy.price}</div>
+          </div>
+        )}
+        {/* Headline on band */}
+        <div
+          className="absolute"
+          style={{
+            left: 70,
+            right: 70,
+            bottom: 180,
+            color: "#3D2410",
+            textAlign: "center",
+          }}
+        >
+          <div
+            style={{
+              fontFamily: "'Playfair Display', serif",
+              fontWeight: 700,
+              fontSize: 96,
+              lineHeight: 1,
+              letterSpacing: "-0.01em",
+            }}
+          >
+            {copy.headline}
+          </div>
+          {copy.tagline && (
+            <div
+              style={{
+                fontFamily: "'Playfair Display', serif",
+                fontStyle: "italic",
+                fontSize: 28,
+                color: "#6B4A2B",
+                marginTop: 16,
+              }}
+            >
+              {copy.tagline}
+            </div>
+          )}
+          <div
+            style={{
+              marginTop: 24,
+              display: "inline-block",
+              border: "2px solid #5C3A1E",
+              padding: "12px 32px",
+              fontFamily: "'Playfair Display', serif",
+              fontSize: 22,
+              letterSpacing: "0.3em",
+              textTransform: "uppercase",
+              color: "#5C3A1E",
+            }}
+          >
+            {copy.cta}
+          </div>
+        </div>
+      </Frame>
+    );
+  }
+
+  // Flash Sale
+  return (
+    <Frame>
+      {BgPhoto}
+      {/* Aggressive dark overlay */}
+      <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.55)" }} />
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.2) 40%, rgba(0,0,0,0.85) 100%)",
+        }}
+      />
+      {/* Diagonal SALE banner */}
+      <div
+        className="absolute"
+        style={{
+          top: 90,
+          left: -120,
+          width: 600,
+          padding: "22px 0",
+          background: "#FFE000",
+          color: "#0a0a0a",
+          textAlign: "center",
+          fontFamily: "'Anton', sans-serif",
+          fontSize: 64,
+          letterSpacing: "0.1em",
+          transform: "rotate(-25deg)",
+          boxShadow: "0 10px 40px rgba(0,0,0,0.5)",
+        }}
+      >
+        ⚡ FLASH DEAL
+      </div>
+      {/* Bottom content */}
+      <div className="absolute" style={{ left: 56, right: 56, bottom: 120, color: "white" }}>
+        <div
+          style={{
+            fontFamily: "'Anton', sans-serif",
+            fontWeight: 900,
+            fontSize: 130,
+            lineHeight: 0.9,
+            textTransform: "uppercase",
+            textShadow: "0 4px 20px rgba(0,0,0,0.8)",
+            letterSpacing: "-0.01em",
+          }}
+        >
+          {copy.headline}
+        </div>
+        {copy.price && (
+          <div className="flex items-baseline gap-6" style={{ marginTop: 24 }}>
+            <div
+              style={{
+                fontFamily: "'DM Sans', sans-serif",
+                fontSize: 36,
+                color: "rgba(255,255,255,0.55)",
+                textDecoration: "line-through",
+              }}
+            >
+              was {fakeOriginal(copy.price)}
+            </div>
+            <div
+              style={{
+                fontFamily: "'Anton', sans-serif",
+                fontSize: 160,
+                color: "#FFE000",
+                lineHeight: 0.9,
+                textShadow: "0 0 30px rgba(255,224,0,0.6), 0 4px 20px rgba(0,0,0,0.8)",
+                animation: "pulseGlow 1.6s ease-in-out infinite",
+              }}
+            >
+              {copy.price}
+            </div>
+            <style>{`@keyframes pulseGlow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.2)}}`}</style>
+          </div>
+        )}
+        <div
+          className="text-center"
+          style={{
+            marginTop: 28,
+            background: "#FF0000",
+            color: "white",
+            padding: "22px 0",
+            borderRadius: 12,
+            fontFamily: "'Anton', sans-serif",
+            fontSize: 48,
+            letterSpacing: "0.15em",
+            textTransform: "uppercase",
+            boxShadow: "0 10px 30px rgba(255,0,0,0.5)",
+          }}
+        >
+          Order Now ⚡
+        </div>
+      </div>
+    </Frame>
+  );
+}
+
+function fakeOriginal(price: string): string {
+  const m = price.match(/(\D*)([\d.,]+)(.*)/);
+  if (!m) return price;
+  const num = parseFloat(m[2].replace(/,/g, ""));
+  if (!isFinite(num) || num <= 0) return price;
+  const inflated = (num * 1.3).toFixed(num >= 10 ? 0 : 2);
+  return `${m[1]}${inflated}${m[3]}`;
 }
 
 /* ----------------------- BLAST TAB ----------------------- */
