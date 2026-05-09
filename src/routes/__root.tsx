@@ -1,5 +1,6 @@
 import { Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
+import { I18nProvider } from "@/lib/i18n";
 
 import appCss from "../styles.css?url";
 
@@ -66,5 +67,9 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
-  return <AppShell />;
+  return (
+    <I18nProvider>
+      <AppShell />
+    </I18nProvider>
+  );
 }
