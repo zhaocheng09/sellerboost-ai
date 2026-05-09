@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { callAI } from "@/lib/ai";
 import { useLocalStorage, type ActivityItem, type BusinessProfile, defaultProfile } from "@/lib/storage";
+import { useT } from "@/lib/i18n";
 
 const searchSchema = z.object({
   tab: z.enum(["caption", "poster", "blast"]).optional(),
@@ -53,18 +54,19 @@ function pushActivity(activity: ActivityItem[], setActivity: (v: ActivityItem[])
 function StudioPage() {
   const search = Route.useSearch();
   const initial = (search.tab as "caption" | "poster" | "blast" | undefined) ?? "caption";
+  const { t } = useT();
 
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl md:text-3xl font-bold">Content Studio ✨</h1>
-        <p className="text-sm text-muted-foreground mt-1">AI-powered content for your store.</p>
+        <h1 className="text-2xl md:text-3xl font-bold">{t("studio.title")} ✨</h1>
+        <p className="text-sm text-muted-foreground mt-1">{t("studio.sub")}</p>
       </header>
       <Tabs defaultValue={initial} className="w-full">
         <TabsList className="grid grid-cols-3 w-full">
-          <TabsTrigger value="caption">Caption</TabsTrigger>
-          <TabsTrigger value="poster">Poster</TabsTrigger>
-          <TabsTrigger value="blast">Blast</TabsTrigger>
+          <TabsTrigger value="caption">{t("studio.tab.caption")}</TabsTrigger>
+          <TabsTrigger value="poster">{t("studio.tab.poster")}</TabsTrigger>
+          <TabsTrigger value="blast">{t("studio.tab.blast")}</TabsTrigger>
         </TabsList>
         <TabsContent value="caption" className="mt-5">
           <CaptionTab />
@@ -82,6 +84,7 @@ function StudioPage() {
 
 /* ----------------------- CAPTION TAB ----------------------- */
 function CaptionTab() {
+  const { t } = useT();
   const [profile] = useLocalStorage<BusinessProfile>("sellerai.profile", defaultProfile);
   const [activity, setActivity] = useLocalStorage<ActivityItem[]>("sellerai.activity", []);
   const [saved, setSaved] = useLocalStorage<{ id: string; text: string; createdAt: number }[]>("sellerai.savedCaptions", []);
@@ -99,7 +102,7 @@ function CaptionTab() {
 
   async function generate() {
     if (!product.trim()) {
-      toast.error("Tell us your product name first 🙏");
+      toast.error(t("t.needProduct"));
       return;
     }
     setLoading(true);
@@ -111,7 +114,7 @@ function CaptionTab() {
       setResults(arr);
       pushActivity(activity, setActivity, { type: "caption", title: `Caption: ${product}`, preview: arr[0]?.slice(0, 120) });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Oops, let's try that again! 🔄");
+      toast.error(e instanceof Error ? e.message : t("t.tryAgain"));
     } finally {
       setLoading(false);
     }
@@ -150,16 +153,16 @@ function CaptionTab() {
     <div className="space-y-5">
       <Card className="p-5 space-y-4">
         <div>
-          <Label htmlFor="product">Product name</Label>
+          <Label htmlFor="product">{t("f.product")}</Label>
           <Input id="product" value={product} onChange={(e) => setProduct(e.target.value)} placeholder="e.g. Kuih Lapis Pandan" className="mt-1.5" />
         </div>
         <div>
-          <Label htmlFor="desc">Short description <span className="text-muted-foreground">(optional)</span></Label>
+          <Label htmlFor="desc">{t("f.shortDesc")} <span className="text-muted-foreground">{t("f.optional")}</span></Label>
           <Textarea id="desc" value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="pandan flavour, soft texture, 12 pieces per box" className="mt-1.5 min-h-20" />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label>Platform</Label>
+            <Label>{t("f.platform")}</Label>
             <Select value={platform} onValueChange={(v) => setPlatform(v as BusinessProfile["platform"])}>
               <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -171,25 +174,25 @@ function CaptionTab() {
             </Select>
           </div>
           <div>
-            <Label>Tone</Label>
+            <Label>{t("f.tone")}</Label>
             <Select value={tone} onValueChange={setTone}>
               <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="Friendly & Casual">Friendly & Casual</SelectItem>
-                <SelectItem value="Professional">Professional</SelectItem>
-                <SelectItem value="Cute & Playful">Cute & Playful</SelectItem>
-                <SelectItem value="Urgent (Flash Sale)">Urgent (Flash Sale)</SelectItem>
+                <SelectItem value="Friendly & Casual">{t("tone.friendly")}</SelectItem>
+                <SelectItem value="Professional">{t("tone.pro")}</SelectItem>
+                <SelectItem value="Cute & Playful">{t("tone.cute")}</SelectItem>
+                <SelectItem value="Urgent (Flash Sale)">{t("tone.urgent")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
         <div>
-          <Label>Language / Bahasa</Label>
+          <Label>{t("f.lang")}</Label>
           <div className="grid grid-cols-3 gap-2 mt-1.5">
             {[
-              { v: "en", l: "English" },
-              { v: "ms", l: "Bahasa" },
-              { v: "both", l: "Bilingual" },
+              { v: "en", l: t("lang.en") },
+              { v: "ms", l: t("lang.ms") },
+              { v: "both", l: t("lang.both") },
             ].map((opt) => (
               <button
                 key={opt.v}
@@ -206,7 +209,7 @@ function CaptionTab() {
         </div>
         <Button onClick={generate} disabled={loading} className="w-full bg-gradient-brand text-brand-foreground hover:opacity-90 h-12 text-base font-semibold shadow-soft">
           <Sparkles className="h-4 w-4 mr-2" />
-          {loading ? cookMsg : "Generate Caption"}
+          {loading ? cookMsg : t("btn.genCaption")}
         </Button>
       </Card>
 
@@ -227,18 +230,18 @@ function CaptionTab() {
           {results.map((text, idx) => (
             <Card key={idx} className="p-5">
               <div className="flex items-center justify-between mb-2">
-                <div className="text-xs font-semibold text-brand">Variation {idx + 1}</div>
+                <div className="text-xs font-semibold text-brand">{t("label.variation")} {idx + 1}</div>
               </div>
               <p className="text-sm whitespace-pre-wrap leading-relaxed">{text}</p>
               <div className="flex gap-2 mt-4 flex-wrap">
-                <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(text); toast.success("Caption copied! ✅"); }}>
-                  <Copy className="h-3.5 w-3.5 mr-1.5" /> Copy
+                <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(text); toast.success(t("t.captionCopied")); }}>
+                  <Copy className="h-3.5 w-3.5 mr-1.5" /> {t("btn.copy")}
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => regenerateOne(idx)} disabled={loading}>
-                  <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Regenerate
+                  <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> {t("btn.regen")}
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => { setSaved([{ id: crypto.randomUUID(), text, createdAt: Date.now() }, ...saved].slice(0, 50)); toast.success("Caption saved! 🎉"); }}>
-                  <Save className="h-3.5 w-3.5 mr-1.5" /> Save
+                <Button size="sm" variant="outline" onClick={() => { setSaved([{ id: crypto.randomUUID(), text, createdAt: Date.now() }, ...saved].slice(0, 50)); toast.success(t("t.captionSaved")); }}>
+                  <Save className="h-3.5 w-3.5 mr-1.5" /> {t("btn.save")}
                 </Button>
               </div>
             </Card>
@@ -246,15 +249,15 @@ function CaptionTab() {
 
           <Button onClick={genHashtags} disabled={hashLoading} variant="outline" className="w-full h-11">
             <Hash className="h-4 w-4 mr-2" />
-            {hashLoading ? "Mixing hashtags..." : "Generate Hashtags"}
+            {hashLoading ? "..." : t("btn.genHashtags")}
           </Button>
 
           {hashtags.length > 0 && (
             <Card className="p-5">
               <div className="flex items-center justify-between mb-3">
-                <div className="text-sm font-semibold">Hashtags</div>
-                <Button size="sm" variant="ghost" onClick={() => { navigator.clipboard.writeText(hashtags.join(" ")); toast.success("Hashtags copied! ✅"); }}>
-                  <Copy className="h-3.5 w-3.5 mr-1.5" /> Copy all
+                <div className="text-sm font-semibold">{t("label.hashtags")}</div>
+                <Button size="sm" variant="ghost" onClick={() => { navigator.clipboard.writeText(hashtags.join(" ")); toast.success(t("t.hashCopied")); }}>
+                  <Copy className="h-3.5 w-3.5 mr-1.5" /> {t("btn.copyAll")}
                 </Button>
               </div>
               <div className="flex flex-wrap gap-1.5">
@@ -316,6 +319,7 @@ const NOISE_SVG =
   "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.5 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/></svg>\")";
 
 function PosterTab() {
+  const { t } = useT();
   const [profile] = useLocalStorage<BusinessProfile>("sellerai.profile", defaultProfile);
   const [activity, setActivity] = useLocalStorage<ActivityItem[]>("sellerai.activity", []);
   const [imgUrl, setImgUrl] = useState<string | null>(null);
@@ -326,6 +330,8 @@ function PosterTab() {
   const [copy, setCopy] = useState<PosterCopy | null>(null);
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [seed, setSeed] = useState<number>(() => Date.now());
+  const [shuffleKey, setShuffleKey] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
   const posterRef = useRef<HTMLDivElement>(null);
   const loadingMsg = usePosterLoadingMsg(loading);
@@ -338,17 +344,28 @@ function PosterTab() {
   }
 
   async function generate() {
-    if (!product.trim()) { toast.error("Add a product name first"); return; }
+    if (!product.trim()) { toast.error(t("t.needProduct")); return; }
+    const newSeed = Date.now() + Math.floor(Math.random() * 100000);
+    setSeed(newSeed);
+    setShuffleKey((k) => k + 1);
     setLoading(true);
     try {
-      const { result } = await callAI("poster", { product, price, style, tagline }, profile);
+      const { result } = await callAI("poster", { product, price, style, tagline, randomSeed: newSeed }, profile);
       const r = result as PosterCopy;
       setCopy({ headline: r.headline || product, tagline: r.tagline || "", cta: r.cta || "Order Now", price: price || r.price || "" });
       pushActivity(activity, setActivity, { type: "poster", title: `Poster: ${product}`, preview: r.tagline });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Try again");
+      toast.error(e instanceof Error ? e.message : t("t.tryAgain"));
     } finally {
       setLoading(false);
+    }
+  }
+
+  function switchStyle(s: PosterStyle) {
+    setStyle(s);
+    if (copy) {
+      setSeed(Date.now() + Math.floor(Math.random() * 100000));
+      setShuffleKey((k) => k + 1);
     }
   }
 
@@ -363,13 +380,13 @@ function PosterTab() {
         logging: false,
       });
       const link = document.createElement("a");
-      link.download = `${(product || "poster").replace(/\s+/g, "-").toLowerCase()}-1080.png`;
+      link.download = `SellerAI-poster.png`;
       link.href = canvas.toDataURL("image/png");
       link.click();
-      toast.success("Poster downloaded! 🎉");
+      toast.success(t("t.posterDownloaded"));
     } catch (err) {
       console.error(err);
-      toast.error("Couldn't capture the poster — try again");
+      toast.error(t("t.tryAgain"));
     } finally {
       setDownloading(false);
     }
@@ -379,7 +396,7 @@ function PosterTab() {
     <div className="space-y-5">
       <Card className="p-5 space-y-4">
         <div>
-          <Label>Product photo</Label>
+          <Label>{t("p.photo")}</Label>
           <div
             onClick={() => fileRef.current?.click()}
             onDragOver={(e) => e.preventDefault()}
@@ -391,8 +408,8 @@ function PosterTab() {
             ) : (
               <>
                 <Upload className="h-7 w-7 text-muted-foreground mx-auto mb-2" />
-                <div className="text-sm font-medium">Tap to upload or drag photo here</div>
-                <div className="text-xs text-muted-foreground mt-0.5">JPG, PNG up to ~5MB</div>
+                <div className="text-sm font-medium">{t("p.upload")}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">{t("p.uploadSub")}</div>
               </>
             )}
             <input ref={fileRef} type="file" accept="image/*" onChange={(e) => handleFile(e.target.files?.[0] || null)} className="hidden" />
@@ -400,30 +417,30 @@ function PosterTab() {
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label htmlFor="pp">Product name</Label>
+            <Label htmlFor="pp">{t("f.product")}</Label>
             <Input id="pp" value={product} onChange={(e) => setProduct(e.target.value)} placeholder="Kuih Lapis" className="mt-1.5" />
           </div>
           <div>
-            <Label htmlFor="pr">Price <span className="text-muted-foreground">(optional)</span></Label>
+            <Label htmlFor="pr">{t("p.price")} <span className="text-muted-foreground">{t("f.optional")}</span></Label>
             <Input id="pr" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="RM 12" className="mt-1.5" />
           </div>
         </div>
         <div>
-          <Label htmlFor="tg">Tagline hint <span className="text-muted-foreground">(optional, AI will polish)</span></Label>
+          <Label htmlFor="tg">{t("p.tagline")} <span className="text-muted-foreground">{t("p.taglineSub")}</span></Label>
           <Input id="tg" value={tagline} onChange={(e) => setTagline(e.target.value)} placeholder="Fresh from oven" className="mt-1.5" />
         </div>
         <div>
-          <Label>Poster style</Label>
+          <Label>{t("p.style")}</Label>
           <div className="grid grid-cols-2 gap-2 mt-1.5">
             {POSTER_STYLES.map((s) => (
-              <button key={s} type="button" onClick={() => setStyle(s)} className={`px-3 py-2 text-sm rounded-lg border transition-all ${style === s ? "bg-brand text-brand-foreground border-brand shadow-soft" : "bg-card border-border hover:bg-muted"}`}>
-                {s}
+              <button key={s} type="button" onClick={() => switchStyle(s)} className={`px-3 py-2 text-sm rounded-lg border transition-all ${style === s ? "bg-brand text-brand-foreground border-brand shadow-soft" : "bg-card border-border hover:bg-muted"}`}>
+                {posterStyleLabel(s, t)}
               </button>
             ))}
           </div>
         </div>
         <Button onClick={generate} disabled={loading} className="w-full bg-gradient-brand text-brand-foreground hover:opacity-90 h-12 text-base font-semibold shadow-soft">
-          🎨 {loading ? "Designing your poster..." : "Generate Poster"}
+          🎨 {loading ? t("p.designing") : t("p.gen")}
         </Button>
       </Card>
 
@@ -449,38 +466,51 @@ function PosterTab() {
       {copy && (
         <div className="space-y-3">
           {/* Scaled wrapper — actual poster renders at 1080x1080 inside */}
-          <div className="w-full max-w-sm mx-auto">
-            <ScaledPoster ref={posterRef} style={style} copy={copy} imgUrl={imgUrl} product={product} />
+          <div key={shuffleKey} className="w-full max-w-sm mx-auto poster-shuffle">
+            <ScaledPoster ref={posterRef} style={style} copy={copy} imgUrl={imgUrl} product={product} seed={seed} />
           </div>
-          <div className="flex gap-2 flex-wrap justify-center">
-            <Button onClick={downloadAsImage} disabled={downloading} className="bg-gradient-brand text-brand-foreground hover:opacity-90">
-              <Download className="h-4 w-4 mr-1.5" /> {downloading ? "Saving..." : "Download Poster"}
-            </Button>
-            <Button variant="outline" onClick={generate} disabled={loading}><RefreshCw className="h-4 w-4 mr-1.5" /> Regenerate</Button>
+          <div className="text-center text-[11px] text-muted-foreground -mt-1">
+            ✦ {posterStyleLabel(style, t)} · Layout {(seed % 4) + 1}
           </div>
+          <Button onClick={downloadAsImage} disabled={downloading} className="w-full max-w-sm mx-auto flex bg-[#059669] hover:bg-[#047857] text-white h-12 font-semibold rounded-xl">
+            <Download className="h-4 w-4 mr-2" /> {downloading ? t("p.downloading") : `⬇️ ${t("p.download")}`}
+          </Button>
+          <Button variant="outline" onClick={generate} disabled={loading} className="w-full max-w-sm mx-auto flex h-11">
+            <RefreshCw className="h-4 w-4 mr-2" /> 🔄 {t("btn.regen")}
+          </Button>
           <div className="pt-2">
-            <div className="text-xs text-center text-muted-foreground mb-2">Try another style</div>
+            <div className="text-xs text-center text-muted-foreground mb-2">{t("p.tryStyle")}</div>
             <div className="grid grid-cols-4 gap-2 max-w-sm mx-auto">
               {POSTER_STYLES.map((s) => (
-                <button key={s} type="button" onClick={() => setStyle(s)}
+                <button key={s} type="button" onClick={() => switchStyle(s)}
                   className={`px-2 py-2 text-[11px] leading-tight rounded-lg border transition-all ${style === s ? "bg-brand text-brand-foreground border-brand shadow-soft" : "bg-card border-border hover:bg-muted"}`}>
-                  {s}
+                  {posterStyleLabel(s, t)}
                 </button>
               ))}
             </div>
           </div>
+          <style>{`.poster-shuffle{animation:posterShuffle 280ms ease}@keyframes posterShuffle{0%{transform:scale(.95);opacity:.6}100%{transform:scale(1);opacity:1}}`}</style>
         </div>
       )}
     </div>
   );
 }
 
+function posterStyleLabel(s: PosterStyle, t: (k: string) => string) {
+  switch (s) {
+    case "Minimal Clean": return t("p.style.minimal");
+    case "Bold & Bright": return t("p.style.bold");
+    case "Rustic Handmade": return t("p.style.rustic");
+    case "Flash Sale": return t("p.style.flash");
+  }
+}
+
 /**
  * ScaledPoster renders the actual poster at 1080x1080 (so html2canvas captures
  * full resolution) inside a wrapper that scales it down to fit the preview.
  */
-const ScaledPoster = ({ style, copy, imgUrl, product, ref }: {
-  style: PosterStyle; copy: PosterCopy; imgUrl: string | null; product: string;
+const ScaledPoster = ({ style, copy, imgUrl, product, seed, ref }: {
+  style: PosterStyle; copy: PosterCopy; imgUrl: string | null; product: string; seed: number;
   ref: React.RefObject<HTMLDivElement | null>;
 }) => {
   const [scale, setScale] = useState(0.32);
@@ -498,18 +528,35 @@ const ScaledPoster = ({ style, copy, imgUrl, product, ref }: {
     <div ref={wrapRef} className="w-full" style={{ aspectRatio: "1 / 1" }}>
       <div style={{ width: 1080, height: 1080, transform: `scale(${scale})`, transformOrigin: "top left" }}>
         <div ref={ref} style={{ width: 1080, height: 1080 }}>
-          <PosterPreview style={style} copy={copy} imgUrl={imgUrl} product={product} />
+          <PosterPreview style={style} copy={copy} imgUrl={imgUrl} product={product} seed={seed} />
         </div>
       </div>
     </div>
   );
 };
 
-function PosterPreview({ style, copy, imgUrl, product }: {
-  style: PosterStyle; copy: PosterCopy; imgUrl: string | null; product: string;
+function PosterPreview({ style, copy, imgUrl, product, seed }: {
+  style: PosterStyle; copy: PosterCopy; imgUrl: string | null; product: string; seed: number;
 }) {
   const photo = imgUrl || "https://images.unsplash.com/photo-1551024601-bec78aea704b?w=1200&q=80";
   const overlay = pickOverlayColor(product || copy.headline);
+
+  // Seeded variations
+  const layoutIdx = seed % 4;            // 0..3
+  const fontIdx = Math.floor(seed / 4) % 4;
+  const accentIdx = Math.floor(seed / 16) % 5;
+  const intensityIdx = Math.floor(seed / 64) % 3;
+  const ACCENTS = ["#FFD700", "#FF6B6B", "#6EE7B7", "#BAE6FD", "#FFFFFF"];
+  const FONTS = [
+    { h: "'Anton', sans-serif", b: "'Plus Jakarta Sans', sans-serif" },
+    { h: "'Bebas Neue', sans-serif", b: "'DM Sans', sans-serif" },
+    { h: "'Plus Jakarta Sans', sans-serif", b: "'DM Sans', sans-serif" },
+    { h: "'Anton', sans-serif", b: "'DM Sans', sans-serif" },
+  ];
+  const INTENSITIES = [0.45, 0.6, 0.72];
+  const accent = ACCENTS[accentIdx];
+  const fonts = FONTS[fontIdx];
+  const dim = INTENSITIES[intensityIdx];
 
   // Common wrappers
   const Frame: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -518,8 +565,8 @@ function PosterPreview({ style, copy, imgUrl, product }: {
       style={{
         width: 1080,
         height: 1080,
-        borderRadius: 16,
-        boxShadow: "inset 0 0 120px rgba(0,0,0,0.45)",
+        borderRadius: 28,
+        boxShadow: "inset 0 0 80px rgba(0,0,0,0.4)",
       }}
     >
       {children}
@@ -535,20 +582,6 @@ function PosterPreview({ style, copy, imgUrl, product }: {
           background: "radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.35) 100%)",
         }}
       />
-      {/* SellerAI watermark */}
-      <div
-        className="pointer-events-none absolute left-0 right-0 text-center"
-        style={{
-          bottom: 18,
-          color: "rgba(255,255,255,0.45)",
-          fontFamily: "'DM Sans', sans-serif",
-          fontSize: 16,
-          letterSpacing: "0.3em",
-          fontWeight: 600,
-        }}
-      >
-        ✦ SELLERAI
-      </div>
     </div>
   );
 
@@ -562,60 +595,48 @@ function PosterPreview({ style, copy, imgUrl, product }: {
   );
 
   if (style === "Minimal Clean") {
+    // Layout variations: 0=bottom-left, 1=bottom-center, 2=top-left, 3=center
+    const align = layoutIdx === 1 ? "center" : layoutIdx === 3 ? "center" : "left";
+    const isTop = layoutIdx === 2;
+    const isCenter = layoutIdx === 3;
+    const gradient = isTop
+      ? "linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 35%, rgba(0,0,0,0.55) 75%, rgba(0,0,0,0.85) 100%)"
+      : `linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,${0.2 + dim}) 75%, rgba(0,0,0,${0.4 + dim}) 100%)`;
     return (
       <Frame>
         {BgPhoto}
-        {/* white-to-transparent gradient from bottom */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 35%, rgba(0,0,0,0.55) 75%, rgba(0,0,0,0.85) 100%)",
-          }}
-        />
-        {/* Top-left watermark */}
-        <div
-          className="absolute"
-          style={{
-            top: 40,
-            left: 48,
-            color: "rgba(255,255,255,0.85)",
-            fontFamily: "'DM Sans', sans-serif",
-            fontSize: 18,
-            letterSpacing: "0.3em",
-            fontWeight: 500,
-            textShadow: "0 2px 12px rgba(0,0,0,0.6)",
-          }}
-        >
-          MADE WITH SELLERAI
-        </div>
-        {/* Bottom content */}
-        <div className="absolute" style={{ left: 56, right: 56, bottom: 88, color: "white" }}>
+        <div className="absolute inset-0" style={{ background: gradient }} />
+        <div className="absolute" style={{
+          left: 56, right: 56,
+          ...(isTop ? { top: 80 } : isCenter ? { top: "50%", transform: "translateY(-50%)" } : { bottom: 80 }),
+          color: "white", textAlign: align as "left" | "center",
+        }}>
           {copy.tagline && (
             <div
               style={{
-                fontFamily: "'DM Sans', sans-serif",
+                fontFamily: fonts.b,
                 fontStyle: "italic",
-                fontSize: 26,
+                fontSize: 22,
                 color: "rgba(255,255,255,0.85)",
                 marginBottom: 18,
                 textShadow: "0 2px 18px rgba(0,0,0,0.7)",
-                maxWidth: "78%",
+                textTransform: "uppercase",
+                letterSpacing: "0.25em",
               }}
             >
               {copy.tagline}
             </div>
           )}
-          <div className="flex items-end justify-between gap-6">
+          <div className={`flex items-end gap-6 ${align === "center" ? "justify-center flex-col" : "justify-between"}`}>
             <div
               style={{
-                fontFamily: "'DM Sans', sans-serif",
+                fontFamily: fonts.b,
                 fontWeight: 800,
-                fontSize: 96,
+                fontSize: layoutIdx === 1 ? 110 : 96,
                 lineHeight: 0.95,
                 letterSpacing: "-0.03em",
                 textShadow: "0 4px 24px rgba(0,0,0,0.8)",
-                maxWidth: "70%",
+                maxWidth: align === "center" ? "100%" : "70%",
               }}
             >
               {copy.headline}
@@ -647,28 +668,27 @@ function PosterPreview({ style, copy, imgUrl, product }: {
   }
 
   if (style === "Bold & Bright") {
+    const ribbonAlign = layoutIdx % 2 === 0 ? "left" : "center";
     return (
       <Frame>
         {BgPhoto}
-        {/* Vignette around edges, center stays bright */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(ellipse at center, rgba(0,0,0,0) 35%, rgba(0,0,0,0.55) 80%, rgba(0,0,0,0.85) 100%)",
-          }}
-        />
+        <div className="absolute inset-0" style={{
+          background: layoutIdx === 2
+            ? "radial-gradient(ellipse at bottom left, rgba(0,0,0,0) 25%, rgba(0,0,0,0.7) 100%)"
+            : "radial-gradient(ellipse at center, rgba(0,0,0,0) 30%, rgba(0,0,0,0.7) 100%)",
+        }} />
         {/* NEW DROP badge */}
         <div
           className="absolute"
           style={{
             top: 48,
             right: 48,
-            background: "#E63946",
-            color: "white",
+            background: accent === "#FFFFFF" ? "#FF3B30" : accent,
+            color: accent === "#FFFFFF" ? "white" : "#0a0a0a",
             padding: "14px 28px",
-            borderRadius: 999,
-            fontFamily: "'Bebas Neue', sans-serif",
+            borderRadius: layoutIdx === 0 ? 999 : layoutIdx === 1 ? 4 : layoutIdx === 2 ? 50 : 999,
+            transform: layoutIdx === 3 ? "rotate(-3deg)" : "none",
+            fontFamily: fonts.h,
             fontSize: 28,
             letterSpacing: "0.25em",
             boxShadow: "0 8px 24px rgba(230,57,70,0.5)",
@@ -691,13 +711,13 @@ function PosterPreview({ style, copy, imgUrl, product }: {
         />
         <div
           className="absolute"
-          style={{ left: 56, right: 56, bottom: 130, color: "white" }}
+          style={{ left: 56, right: 56, bottom: 130, color: "white", textAlign: ribbonAlign as "left" | "center" }}
         >
           <div
             style={{
-              fontFamily: "'Anton', 'Bebas Neue', sans-serif",
+              fontFamily: fonts.h,
               fontWeight: 900,
-              fontSize: 140,
+              fontSize: [120, 140, 100][intensityIdx],
               lineHeight: 0.88,
               textTransform: "uppercase",
               letterSpacing: "-0.01em",
@@ -709,7 +729,7 @@ function PosterPreview({ style, copy, imgUrl, product }: {
           {copy.tagline && (
             <div
               style={{
-                fontFamily: "'DM Sans', sans-serif",
+                fontFamily: fonts.b,
                 fontWeight: 500,
                 fontSize: 24,
                 color: "rgba(255,255,255,0.85)",
@@ -725,9 +745,9 @@ function PosterPreview({ style, copy, imgUrl, product }: {
             {copy.price && (
               <div
                 style={{
-                  fontFamily: "'Anton', sans-serif",
+                  fontFamily: fonts.h,
                   fontSize: 84,
-                  color: "#FFD700",
+                  color: accent,
                   letterSpacing: "-0.01em",
                   textShadow: "0 4px 16px rgba(0,0,0,0.6)",
                 }}
@@ -737,8 +757,8 @@ function PosterPreview({ style, copy, imgUrl, product }: {
             )}
             <div
               style={{
-                background: "#FFD700",
-                color: "#1a1a1a",
+                background: accent,
+                color: accent === "#FFFFFF" ? "#0a0a0a" : "#0a0a0a",
                 padding: "20px 36px",
                 borderRadius: 12,
                 fontFamily: "'Bebas Neue', sans-serif",
@@ -885,7 +905,7 @@ function PosterPreview({ style, copy, imgUrl, product }: {
     <Frame>
       {BgPhoto}
       {/* Aggressive dark overlay */}
-      <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.55)" }} />
+      <div className="absolute inset-0" style={{ background: `rgba(0,0,0,${0.5 + dim * 0.3})` }} />
       <div
         className="absolute inset-0"
         style={{
@@ -988,6 +1008,7 @@ function fakeOriginal(price: string): string {
 
 /* ----------------------- BLAST TAB ----------------------- */
 function BlastTab() {
+  const { t } = useT();
   const [profile] = useLocalStorage<BusinessProfile>("sellerai.profile", defaultProfile);
   const [activity, setActivity] = useLocalStorage<ActivityItem[]>("sellerai.activity", []);
   const [product, setProduct] = useState("");
@@ -998,7 +1019,7 @@ function BlastTab() {
   const [out, setOut] = useState("");
 
   async function generate() {
-    if (!product.trim()) { toast.error("Tell us your product name"); return; }
+    if (!product.trim()) { toast.error(t("t.needProduct")); return; }
     setLoading(true);
     try {
       const { result } = await callAI("blast", { product, price, availability, language }, profile);
@@ -1016,30 +1037,30 @@ function BlastTab() {
     <div className="space-y-5">
       <Card className="p-5 space-y-4">
         <div>
-          <Label htmlFor="bp">Product name</Label>
+          <Label htmlFor="bp">{t("f.product")}</Label>
           <Input id="bp" value={product} onChange={(e) => setProduct(e.target.value)} placeholder="Kuih Lapis Pandan" className="mt-1.5" />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label htmlFor="bpr">Price</Label>
+            <Label htmlFor="bpr">{t("p.price")}</Label>
             <Input id="bpr" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="RM 12" className="mt-1.5" />
           </div>
           <div>
-            <Label>Availability</Label>
+            <Label>{t("b.avail")}</Label>
             <Select value={availability} onValueChange={(v) => setAvailability(v as typeof availability)}>
               <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="In stock">In stock</SelectItem>
-                <SelectItem value="Limited">Limited</SelectItem>
-                <SelectItem value="Last few">Last few</SelectItem>
+                <SelectItem value="In stock">{t("b.instock")}</SelectItem>
+                <SelectItem value="Limited">{t("b.limited")}</SelectItem>
+                <SelectItem value="Last few">{t("b.lastfew")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
         <div>
-          <Label>Language</Label>
+          <Label>{t("f.lang")}</Label>
           <div className="grid grid-cols-3 gap-2 mt-1.5">
-            {[{ v: "en", l: "English" }, { v: "ms", l: "Bahasa" }, { v: "both", l: "Bilingual" }].map((opt) => (
+            {[{ v: "en", l: t("lang.en") }, { v: "ms", l: t("lang.ms") }, { v: "both", l: t("lang.both") }].map((opt) => (
               <button key={opt.v} type="button" onClick={() => setLanguage(opt.v as "en" | "ms" | "both")}
                 className={`px-3 py-2 text-sm rounded-lg border transition-all ${language === opt.v ? "bg-brand text-brand-foreground border-brand shadow-soft" : "bg-card border-border hover:bg-muted"}`}>
                 {opt.l}
@@ -1049,7 +1070,7 @@ function BlastTab() {
         </div>
         <Button onClick={generate} disabled={loading} className="w-full bg-gradient-brand text-brand-foreground hover:opacity-90 h-12 text-base font-semibold shadow-soft">
           <MessageCircle className="h-4 w-4 mr-2" />
-          {loading ? "Writing your blast..." : "Generate Blast Message"}
+          {loading ? t("b.writing") : t("b.gen")}
         </Button>
       </Card>
 
@@ -1057,10 +1078,10 @@ function BlastTab() {
         <Card className="p-5">
           <p className="text-sm whitespace-pre-wrap leading-relaxed">{out}</p>
           <div className="flex gap-2 mt-4">
-            <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(out); toast.success("Message copied! ✅"); }}>
-              <Copy className="h-3.5 w-3.5 mr-1.5" /> Copy
+            <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(out); toast.success(t("t.msgCopied")); }}>
+              <Copy className="h-3.5 w-3.5 mr-1.5" /> {t("btn.copy")}
             </Button>
-            <Button size="sm" variant="outline" onClick={generate} disabled={loading}><RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Regenerate</Button>
+            <Button size="sm" variant="outline" onClick={generate} disabled={loading}><RefreshCw className="h-3.5 w-3.5 mr-1.5" /> {t("btn.regen")}</Button>
           </div>
         </Card>
       )}

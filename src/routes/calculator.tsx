@@ -9,6 +9,7 @@ import { Plus, Trash2, Save, Sparkles, Lightbulb, ChevronRight } from "lucide-re
 import { toast } from "sonner";
 import { useLocalStorage, type ActivityItem, type BusinessProfile, type SavedProduct, defaultProfile } from "@/lib/storage";
 import { callAI } from "@/lib/ai";
+import { useT } from "@/lib/i18n";
 
 export const Route = createFileRoute("/calculator")({
   head: () => ({
@@ -25,16 +26,17 @@ const COMMON_INGREDIENTS = ["Tepung", "Gula", "Mentega", "Telur", "Packaging", "
 type Ing = { name: string; cost: number };
 
 function CalcPage() {
+  const { t } = useT();
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl md:text-3xl font-bold">Business Calculator 💰</h1>
-        <p className="text-sm text-muted-foreground mt-1">Know your numbers, price with confidence.</p>
+        <h1 className="text-2xl md:text-3xl font-bold">{t("calc.title")} 💰</h1>
+        <p className="text-sm text-muted-foreground mt-1">{t("calc.sub")}</p>
       </header>
       <Tabs defaultValue="profit">
         <TabsList className="grid grid-cols-2 w-full">
-          <TabsTrigger value="profit">Profit Calculator</TabsTrigger>
-          <TabsTrigger value="saved">Saved Products</TabsTrigger>
+          <TabsTrigger value="profit">{t("calc.tab.profit")}</TabsTrigger>
+          <TabsTrigger value="saved">{t("calc.tab.saved")}</TabsTrigger>
         </TabsList>
         <TabsContent value="profit" className="mt-5"><ProfitTab /></TabsContent>
         <TabsContent value="saved" className="mt-5"><SavedTab /></TabsContent>
@@ -44,6 +46,7 @@ function CalcPage() {
 }
 
 function ProfitTab() {
+  const { t } = useT();
   const [profile] = useLocalStorage<BusinessProfile>("sellerai.profile", defaultProfile);
   const [activity, setActivity] = useLocalStorage<ActivityItem[]>("sellerai.activity", []);
   const [saved, setSaved] = useLocalStorage<SavedProduct[]>("sellerai.savedProducts", []);
@@ -97,13 +100,13 @@ function ProfitTab() {
     <div className="space-y-5">
       {/* Step 1 */}
       <Card className="p-5">
-        <Step n={1} label="What are you selling?" />
+        <Step n={1} label={t("calc.s1")} />
         <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Kuih Lapis Pandan" className="mt-3" />
       </Card>
 
       {/* Step 2 */}
       <Card className="p-5">
-        <Step n={2} label="Add your ingredients & materials" />
+        <Step n={2} label={t("calc.s2")} />
         <div className="space-y-2 mt-3">
           {ings.map((it, i) => (
             <div key={i} className="flex gap-2">
@@ -116,7 +119,7 @@ function ProfitTab() {
             </div>
           ))}
         </div>
-        <Button variant="outline" size="sm" onClick={addIng} className="mt-3"><Plus className="h-3.5 w-3.5 mr-1.5" /> Add item</Button>
+        <Button variant="outline" size="sm" onClick={addIng} className="mt-3"><Plus className="h-3.5 w-3.5 mr-1.5" /> {t("calc.addItem")}</Button>
         <div className="flex flex-wrap gap-1.5 mt-3">
           {COMMON_INGREDIENTS.map((s) => (
             <button key={s} onClick={() => setIngs([...ings, { name: s, cost: 0 }])}
@@ -129,13 +132,13 @@ function ProfitTab() {
 
       {/* Step 3 */}
       <Card className="p-5">
-        <Step n={3} label="How many units does this batch make?" />
+        <Step n={3} label={t("calc.s3")} />
         <Input type="number" inputMode="numeric" value={units || ""} onChange={(e) => setUnits(parseInt(e.target.value) || 0)} placeholder="e.g. 24" className="mt-3" />
       </Card>
 
       {/* Step 4 */}
       <Card className="p-5">
-        <Step n={4} label="Any other costs?" sub="delivery, sticker labels, marketing — optional" />
+        <Step n={4} label={t("calc.s4")} sub={t("calc.s4.sub")} />
         <div className="relative mt-3">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">RM</span>
           <Input type="number" inputMode="decimal" value={extra || ""} onChange={(e) => setExtra(parseFloat(e.target.value) || 0)} placeholder="0.00" className="pl-9" />
@@ -146,17 +149,17 @@ function ProfitTab() {
       {units > 0 && totalCost > 0 && (
         <Card className="p-5 bg-gradient-warm border-accent space-y-4">
           <div>
-            <div className="text-xs uppercase tracking-wider font-semibold text-accent-foreground/80">Cost per unit</div>
+            <div className="text-xs uppercase tracking-wider font-semibold text-accent-foreground/80">{t("calc.perUnit")}</div>
             <div className="text-3xl font-extrabold text-accent-foreground mt-1">RM {perUnit.toFixed(2)}</div>
-            <div className="text-xs text-accent-foreground/70 mt-1">Batch total: RM {totalCost.toFixed(2)} ÷ {units} units</div>
+            <div className="text-xs text-accent-foreground/70 mt-1">{t("calc.batchTotal")}: RM {totalCost.toFixed(2)} ÷ {units}</div>
           </div>
 
           <div>
-            <div className="text-xs uppercase tracking-wider font-semibold text-accent-foreground/80 mb-2">Suggested selling price</div>
+            <div className="text-xs uppercase tracking-wider font-semibold text-accent-foreground/80 mb-2">{t("calc.suggestPrice")}</div>
             <div className="grid grid-cols-3 gap-2">
               {margins.map((m) => (
                 <div key={m.m} className="rounded-xl bg-card p-3 text-center shadow-card">
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{m.m}% margin</div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{m.m}% {t("calc.margin")}</div>
                   <div className="text-lg font-bold mt-1">RM {m.price.toFixed(2)}</div>
                   <div className="text-[11px] text-success font-medium mt-0.5">+RM {m.profit.toFixed(2)}/unit</div>
                 </div>
@@ -165,7 +168,7 @@ function ProfitTab() {
           </div>
 
           <div>
-            <div className="text-xs uppercase tracking-wider font-semibold text-accent-foreground/80 mb-2">Cost breakdown</div>
+            <div className="text-xs uppercase tracking-wider font-semibold text-accent-foreground/80 mb-2">{t("calc.breakdown")}</div>
             <CostBar ings={ings} extra={extra} totalCost={totalCost} />
           </div>
 
@@ -183,10 +186,10 @@ function ProfitTab() {
 
           <div className="flex gap-2 flex-wrap">
             <Button onClick={getAITip} disabled={tipLoading} variant="outline" size="sm">
-              <Sparkles className="h-3.5 w-3.5 mr-1.5" /> {tipLoading ? "Thinking..." : "Get AI tip"}
+              <Sparkles className="h-3.5 w-3.5 mr-1.5" /> {tipLoading ? t("calc.thinking") : t("calc.aiTip")}
             </Button>
             <Button onClick={saveProduct} className="bg-brand text-brand-foreground hover:bg-brand/90" size="sm">
-              <Save className="h-3.5 w-3.5 mr-1.5" /> Save this product
+              <Save className="h-3.5 w-3.5 mr-1.5" /> {t("calc.saveProduct")}
             </Button>
           </div>
         </Card>
@@ -236,6 +239,7 @@ function pushActivity(activity: ActivityItem[], setActivity: (v: ActivityItem[])
 }
 
 function SavedTab() {
+  const { t } = useT();
   const [saved, setSaved] = useLocalStorage<SavedProduct[]>("sellerai.savedProducts", []);
   const [open, setOpen] = useState<string | null>(null);
 
@@ -243,7 +247,7 @@ function SavedTab() {
     return (
       <Card className="p-8 text-center border-dashed">
         <div className="text-4xl mb-2">💰</div>
-        <p className="text-sm text-muted-foreground">No saved products yet. Calculate one and hit Save!</p>
+        <p className="text-sm text-muted-foreground">{t("calc.noSaved")}</p>
       </Card>
     );
   }

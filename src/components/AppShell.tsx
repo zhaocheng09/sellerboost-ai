@@ -3,18 +3,20 @@ import { Home, Wand2, Calculator, Package, Settings, Sparkles, Zap } from "lucid
 import { useEffect } from "react";
 import { useLocalStorage } from "@/lib/storage";
 import { Toaster } from "@/components/ui/sonner";
+import { useT } from "@/lib/i18n";
 
 const NAV = [
-  { to: "/", label: "Home", icon: Home },
-  { to: "/studio", label: "Studio", icon: Wand2 },
-  { to: "/calculator", label: "Profit", icon: Calculator },
-  { to: "/inventory", label: "Stock", icon: Package },
-  { to: "/settings", label: "Settings", icon: Settings },
-];
+  { to: "/", key: "nav.home", icon: Home },
+  { to: "/studio", key: "nav.studio", icon: Wand2 },
+  { to: "/calculator", key: "nav.profit", icon: Calculator },
+  { to: "/inventory", key: "nav.stock", icon: Package },
+  { to: "/settings", key: "nav.settings", icon: Settings },
+] as const;
 
 export function AppShell() {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [theme] = useLocalStorage<"light" | "dark">("sellerai.theme", "light");
+  const { t } = useT();
 
   useEffect(() => {
     const root = document.documentElement;
@@ -51,12 +53,12 @@ export function AppShell() {
               }`}
             >
               <Icon className="h-4 w-4" />
-              {item.label}
+              {t(item.key)}
             </Link>
           );
         })}
         <div className="mt-auto text-xs text-muted-foreground px-2">
-          Built for Malaysian micro-entrepreneurs ❤️
+          {t("nav.tagline")}
         </div>
       </aside>
 
@@ -84,7 +86,7 @@ export function AppShell() {
                 <div className={`h-6 w-6 flex items-center justify-center rounded-lg ${active ? "bg-brand-soft" : ""}`}>
                   <Icon className="h-4 w-4" />
                 </div>
-                {item.label}
+                {t(item.key)}
               </Link>
             );
           })}
