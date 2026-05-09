@@ -509,8 +509,8 @@ function posterStyleLabel(s: PosterStyle, t: (k: string) => string) {
  * ScaledPoster renders the actual poster at 1080x1080 (so html2canvas captures
  * full resolution) inside a wrapper that scales it down to fit the preview.
  */
-const ScaledPoster = ({ style, copy, imgUrl, product, ref }: {
-  style: PosterStyle; copy: PosterCopy; imgUrl: string | null; product: string;
+const ScaledPoster = ({ style, copy, imgUrl, product, seed, ref }: {
+  style: PosterStyle; copy: PosterCopy; imgUrl: string | null; product: string; seed: number;
   ref: React.RefObject<HTMLDivElement | null>;
 }) => {
   const [scale, setScale] = useState(0.32);
@@ -528,18 +528,35 @@ const ScaledPoster = ({ style, copy, imgUrl, product, ref }: {
     <div ref={wrapRef} className="w-full" style={{ aspectRatio: "1 / 1" }}>
       <div style={{ width: 1080, height: 1080, transform: `scale(${scale})`, transformOrigin: "top left" }}>
         <div ref={ref} style={{ width: 1080, height: 1080 }}>
-          <PosterPreview style={style} copy={copy} imgUrl={imgUrl} product={product} />
+          <PosterPreview style={style} copy={copy} imgUrl={imgUrl} product={product} seed={seed} />
         </div>
       </div>
     </div>
   );
 };
 
-function PosterPreview({ style, copy, imgUrl, product }: {
-  style: PosterStyle; copy: PosterCopy; imgUrl: string | null; product: string;
+function PosterPreview({ style, copy, imgUrl, product, seed }: {
+  style: PosterStyle; copy: PosterCopy; imgUrl: string | null; product: string; seed: number;
 }) {
   const photo = imgUrl || "https://images.unsplash.com/photo-1551024601-bec78aea704b?w=1200&q=80";
   const overlay = pickOverlayColor(product || copy.headline);
+
+  // Seeded variations
+  const layoutIdx = seed % 4;            // 0..3
+  const fontIdx = Math.floor(seed / 4) % 4;
+  const accentIdx = Math.floor(seed / 16) % 5;
+  const intensityIdx = Math.floor(seed / 64) % 3;
+  const ACCENTS = ["#FFD700", "#FF6B6B", "#6EE7B7", "#BAE6FD", "#FFFFFF"];
+  const FONTS = [
+    { h: "'Anton', sans-serif", b: "'Plus Jakarta Sans', sans-serif" },
+    { h: "'Bebas Neue', sans-serif", b: "'DM Sans', sans-serif" },
+    { h: "'Plus Jakarta Sans', sans-serif", b: "'DM Sans', sans-serif" },
+    { h: "'Anton', sans-serif", b: "'DM Sans', sans-serif" },
+  ];
+  const INTENSITIES = [0.45, 0.6, 0.72];
+  const accent = ACCENTS[accentIdx];
+  const fonts = FONTS[fontIdx];
+  const dim = INTENSITIES[intensityIdx];
 
   // Common wrappers
   const Frame: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -548,8 +565,8 @@ function PosterPreview({ style, copy, imgUrl, product }: {
       style={{
         width: 1080,
         height: 1080,
-        borderRadius: 16,
-        boxShadow: "inset 0 0 120px rgba(0,0,0,0.45)",
+        borderRadius: 28,
+        boxShadow: "inset 0 0 80px rgba(0,0,0,0.4)",
       }}
     >
       {children}
@@ -565,20 +582,6 @@ function PosterPreview({ style, copy, imgUrl, product }: {
           background: "radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.35) 100%)",
         }}
       />
-      {/* SellerAI watermark */}
-      <div
-        className="pointer-events-none absolute left-0 right-0 text-center"
-        style={{
-          bottom: 18,
-          color: "rgba(255,255,255,0.45)",
-          fontFamily: "'DM Sans', sans-serif",
-          fontSize: 16,
-          letterSpacing: "0.3em",
-          fontWeight: 600,
-        }}
-      >
-        ✦ SELLERAI
-      </div>
     </div>
   );
 
@@ -592,60 +595,48 @@ function PosterPreview({ style, copy, imgUrl, product }: {
   );
 
   if (style === "Minimal Clean") {
+    // Layout variations: 0=bottom-left, 1=bottom-center, 2=top-left, 3=center
+    const align = layoutIdx === 1 ? "center" : layoutIdx === 3 ? "center" : "left";
+    const isTop = layoutIdx === 2;
+    const isCenter = layoutIdx === 3;
+    const gradient = isTop
+      ? "linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 35%, rgba(0,0,0,0.55) 75%, rgba(0,0,0,0.85) 100%)"
+      : `linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,${0.2 + dim}) 75%, rgba(0,0,0,${0.4 + dim}) 100%)`;
     return (
       <Frame>
         {BgPhoto}
-        {/* white-to-transparent gradient from bottom */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 35%, rgba(0,0,0,0.55) 75%, rgba(0,0,0,0.85) 100%)",
-          }}
-        />
-        {/* Top-left watermark */}
-        <div
-          className="absolute"
-          style={{
-            top: 40,
-            left: 48,
-            color: "rgba(255,255,255,0.85)",
-            fontFamily: "'DM Sans', sans-serif",
-            fontSize: 18,
-            letterSpacing: "0.3em",
-            fontWeight: 500,
-            textShadow: "0 2px 12px rgba(0,0,0,0.6)",
-          }}
-        >
-          MADE WITH SELLERAI
-        </div>
-        {/* Bottom content */}
-        <div className="absolute" style={{ left: 56, right: 56, bottom: 88, color: "white" }}>
+        <div className="absolute inset-0" style={{ background: gradient }} />
+        <div className="absolute" style={{
+          left: 56, right: 56,
+          ...(isTop ? { top: 80 } : isCenter ? { top: "50%", transform: "translateY(-50%)" } : { bottom: 80 }),
+          color: "white", textAlign: align as "left" | "center",
+        }}>
           {copy.tagline && (
             <div
               style={{
-                fontFamily: "'DM Sans', sans-serif",
+                fontFamily: fonts.b,
                 fontStyle: "italic",
-                fontSize: 26,
+                fontSize: 22,
                 color: "rgba(255,255,255,0.85)",
                 marginBottom: 18,
                 textShadow: "0 2px 18px rgba(0,0,0,0.7)",
-                maxWidth: "78%",
+                textTransform: "uppercase",
+                letterSpacing: "0.25em",
               }}
             >
               {copy.tagline}
             </div>
           )}
-          <div className="flex items-end justify-between gap-6">
+          <div className={`flex items-end gap-6 ${align === "center" ? "justify-center flex-col" : "justify-between"}`}>
             <div
               style={{
-                fontFamily: "'DM Sans', sans-serif",
+                fontFamily: fonts.b,
                 fontWeight: 800,
-                fontSize: 96,
+                fontSize: layoutIdx === 1 ? 110 : 96,
                 lineHeight: 0.95,
                 letterSpacing: "-0.03em",
                 textShadow: "0 4px 24px rgba(0,0,0,0.8)",
-                maxWidth: "70%",
+                maxWidth: align === "center" ? "100%" : "70%",
               }}
             >
               {copy.headline}
@@ -677,28 +668,27 @@ function PosterPreview({ style, copy, imgUrl, product }: {
   }
 
   if (style === "Bold & Bright") {
+    const ribbonAlign = layoutIdx % 2 === 0 ? "left" : "center";
     return (
       <Frame>
         {BgPhoto}
-        {/* Vignette around edges, center stays bright */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(ellipse at center, rgba(0,0,0,0) 35%, rgba(0,0,0,0.55) 80%, rgba(0,0,0,0.85) 100%)",
-          }}
-        />
+        <div className="absolute inset-0" style={{
+          background: layoutIdx === 2
+            ? "radial-gradient(ellipse at bottom left, rgba(0,0,0,0) 25%, rgba(0,0,0,0.7) 100%)"
+            : "radial-gradient(ellipse at center, rgba(0,0,0,0) 30%, rgba(0,0,0,0.7) 100%)",
+        }} />
         {/* NEW DROP badge */}
         <div
           className="absolute"
           style={{
             top: 48,
             right: 48,
-            background: "#E63946",
-            color: "white",
+            background: accent === "#FFFFFF" ? "#FF3B30" : accent,
+            color: accent === "#FFFFFF" ? "white" : "#0a0a0a",
             padding: "14px 28px",
-            borderRadius: 999,
-            fontFamily: "'Bebas Neue', sans-serif",
+            borderRadius: layoutIdx === 0 ? 999 : layoutIdx === 1 ? 4 : layoutIdx === 2 ? 50 : 999,
+            transform: layoutIdx === 3 ? "rotate(-3deg)" : "none",
+            fontFamily: fonts.h,
             fontSize: 28,
             letterSpacing: "0.25em",
             boxShadow: "0 8px 24px rgba(230,57,70,0.5)",
@@ -721,13 +711,13 @@ function PosterPreview({ style, copy, imgUrl, product }: {
         />
         <div
           className="absolute"
-          style={{ left: 56, right: 56, bottom: 130, color: "white" }}
+          style={{ left: 56, right: 56, bottom: 130, color: "white", textAlign: ribbonAlign as "left" | "center" }}
         >
           <div
             style={{
-              fontFamily: "'Anton', 'Bebas Neue', sans-serif",
+              fontFamily: fonts.h,
               fontWeight: 900,
-              fontSize: 140,
+              fontSize: [120, 140, 100][intensityIdx],
               lineHeight: 0.88,
               textTransform: "uppercase",
               letterSpacing: "-0.01em",
@@ -739,7 +729,7 @@ function PosterPreview({ style, copy, imgUrl, product }: {
           {copy.tagline && (
             <div
               style={{
-                fontFamily: "'DM Sans', sans-serif",
+                fontFamily: fonts.b,
                 fontWeight: 500,
                 fontSize: 24,
                 color: "rgba(255,255,255,0.85)",
@@ -755,9 +745,9 @@ function PosterPreview({ style, copy, imgUrl, product }: {
             {copy.price && (
               <div
                 style={{
-                  fontFamily: "'Anton', sans-serif",
+                  fontFamily: fonts.h,
                   fontSize: 84,
-                  color: "#FFD700",
+                  color: accent,
                   letterSpacing: "-0.01em",
                   textShadow: "0 4px 16px rgba(0,0,0,0.6)",
                 }}
@@ -767,8 +757,8 @@ function PosterPreview({ style, copy, imgUrl, product }: {
             )}
             <div
               style={{
-                background: "#FFD700",
-                color: "#1a1a1a",
+                background: accent,
+                color: accent === "#FFFFFF" ? "#0a0a0a" : "#0a0a0a",
                 padding: "20px 36px",
                 borderRadius: 12,
                 fontFamily: "'Bebas Neue', sans-serif",
@@ -915,7 +905,7 @@ function PosterPreview({ style, copy, imgUrl, product }: {
     <Frame>
       {BgPhoto}
       {/* Aggressive dark overlay */}
-      <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.55)" }} />
+      <div className="absolute inset-0" style={{ background: `rgba(0,0,0,${0.5 + dim * 0.3})` }} />
       <div
         className="absolute inset-0"
         style={{
