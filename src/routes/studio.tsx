@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { callAI } from "@/lib/ai";
 import { useLocalStorage, type ActivityItem, type BusinessProfile, defaultProfile } from "@/lib/storage";
+import { useT } from "@/lib/i18n";
 
 const searchSchema = z.object({
   tab: z.enum(["caption", "poster", "blast"]).optional(),
@@ -53,18 +54,19 @@ function pushActivity(activity: ActivityItem[], setActivity: (v: ActivityItem[])
 function StudioPage() {
   const search = Route.useSearch();
   const initial = (search.tab as "caption" | "poster" | "blast" | undefined) ?? "caption";
+  const { t } = useT();
 
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl md:text-3xl font-bold">Content Studio ✨</h1>
-        <p className="text-sm text-muted-foreground mt-1">AI-powered content for your store.</p>
+        <h1 className="text-2xl md:text-3xl font-bold">{t("studio.title")} ✨</h1>
+        <p className="text-sm text-muted-foreground mt-1">{t("studio.sub")}</p>
       </header>
       <Tabs defaultValue={initial} className="w-full">
         <TabsList className="grid grid-cols-3 w-full">
-          <TabsTrigger value="caption">Caption</TabsTrigger>
-          <TabsTrigger value="poster">Poster</TabsTrigger>
-          <TabsTrigger value="blast">Blast</TabsTrigger>
+          <TabsTrigger value="caption">{t("studio.tab.caption")}</TabsTrigger>
+          <TabsTrigger value="poster">{t("studio.tab.poster")}</TabsTrigger>
+          <TabsTrigger value="blast">{t("studio.tab.blast")}</TabsTrigger>
         </TabsList>
         <TabsContent value="caption" className="mt-5">
           <CaptionTab />
