@@ -208,7 +208,7 @@ function Step({ n, label, sub }: { n: number; label: string; sub?: string }) {
 }
 
 function CostBar({ ings, extra, totalCost }: { ings: Ing[]; extra: number; totalCost: number }) {
-  const palette = ["#F59E0B", "#FB923C", "#FBBF24", "#0F766E", "#14B8A6", "#84CC16", "#A78BFA"];
+  const palette = ["#059669", "#34D399", "#6EE7B7", "#047857", "#10B981", "#84CC16", "#A78BFA"];
   const items = [...ings.filter((i) => i.cost > 0), ...(extra > 0 ? [{ name: "Other", cost: extra }] : [])];
   return (
     <div>
