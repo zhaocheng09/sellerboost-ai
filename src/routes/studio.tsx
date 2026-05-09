@@ -991,6 +991,7 @@ function fakeOriginal(price: string): string {
 
 /* ----------------------- BLAST TAB ----------------------- */
 function BlastTab() {
+  const { t } = useT();
   const [profile] = useLocalStorage<BusinessProfile>("sellerai.profile", defaultProfile);
   const [activity, setActivity] = useLocalStorage<ActivityItem[]>("sellerai.activity", []);
   const [product, setProduct] = useState("");
@@ -1001,7 +1002,7 @@ function BlastTab() {
   const [out, setOut] = useState("");
 
   async function generate() {
-    if (!product.trim()) { toast.error("Tell us your product name"); return; }
+    if (!product.trim()) { toast.error(t("t.needProduct")); return; }
     setLoading(true);
     try {
       const { result } = await callAI("blast", { product, price, availability, language }, profile);
@@ -1019,30 +1020,30 @@ function BlastTab() {
     <div className="space-y-5">
       <Card className="p-5 space-y-4">
         <div>
-          <Label htmlFor="bp">Product name</Label>
+          <Label htmlFor="bp">{t("f.product")}</Label>
           <Input id="bp" value={product} onChange={(e) => setProduct(e.target.value)} placeholder="Kuih Lapis Pandan" className="mt-1.5" />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label htmlFor="bpr">Price</Label>
+            <Label htmlFor="bpr">{t("p.price")}</Label>
             <Input id="bpr" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="RM 12" className="mt-1.5" />
           </div>
           <div>
-            <Label>Availability</Label>
+            <Label>{t("b.avail")}</Label>
             <Select value={availability} onValueChange={(v) => setAvailability(v as typeof availability)}>
               <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="In stock">In stock</SelectItem>
-                <SelectItem value="Limited">Limited</SelectItem>
-                <SelectItem value="Last few">Last few</SelectItem>
+                <SelectItem value="In stock">{t("b.instock")}</SelectItem>
+                <SelectItem value="Limited">{t("b.limited")}</SelectItem>
+                <SelectItem value="Last few">{t("b.lastfew")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
         <div>
-          <Label>Language</Label>
+          <Label>{t("f.lang")}</Label>
           <div className="grid grid-cols-3 gap-2 mt-1.5">
-            {[{ v: "en", l: "English" }, { v: "ms", l: "Bahasa" }, { v: "both", l: "Bilingual" }].map((opt) => (
+            {[{ v: "en", l: t("lang.en") }, { v: "ms", l: t("lang.ms") }, { v: "both", l: t("lang.both") }].map((opt) => (
               <button key={opt.v} type="button" onClick={() => setLanguage(opt.v as "en" | "ms" | "both")}
                 className={`px-3 py-2 text-sm rounded-lg border transition-all ${language === opt.v ? "bg-brand text-brand-foreground border-brand shadow-soft" : "bg-card border-border hover:bg-muted"}`}>
                 {opt.l}
@@ -1052,7 +1053,7 @@ function BlastTab() {
         </div>
         <Button onClick={generate} disabled={loading} className="w-full bg-gradient-brand text-brand-foreground hover:opacity-90 h-12 text-base font-semibold shadow-soft">
           <MessageCircle className="h-4 w-4 mr-2" />
-          {loading ? "Writing your blast..." : "Generate Blast Message"}
+          {loading ? t("b.writing") : t("b.gen")}
         </Button>
       </Card>
 
@@ -1060,10 +1061,10 @@ function BlastTab() {
         <Card className="p-5">
           <p className="text-sm whitespace-pre-wrap leading-relaxed">{out}</p>
           <div className="flex gap-2 mt-4">
-            <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(out); toast.success("Message copied! ✅"); }}>
-              <Copy className="h-3.5 w-3.5 mr-1.5" /> Copy
+            <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(out); toast.success(t("t.msgCopied")); }}>
+              <Copy className="h-3.5 w-3.5 mr-1.5" /> {t("btn.copy")}
             </Button>
-            <Button size="sm" variant="outline" onClick={generate} disabled={loading}><RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Regenerate</Button>
+            <Button size="sm" variant="outline" onClick={generate} disabled={loading}><RefreshCw className="h-3.5 w-3.5 mr-1.5" /> {t("btn.regen")}</Button>
           </div>
         </Card>
       )}
