@@ -319,6 +319,7 @@ const NOISE_SVG =
   "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.5 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/></svg>\")";
 
 function PosterTab() {
+  const { t } = useT();
   const [profile] = useLocalStorage<BusinessProfile>("sellerai.profile", defaultProfile);
   const [activity, setActivity] = useLocalStorage<ActivityItem[]>("sellerai.activity", []);
   const [imgUrl, setImgUrl] = useState<string | null>(null);
@@ -329,6 +330,8 @@ function PosterTab() {
   const [copy, setCopy] = useState<PosterCopy | null>(null);
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [seed, setSeed] = useState<number>(() => Date.now());
+  const [shuffleKey, setShuffleKey] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
   const posterRef = useRef<HTMLDivElement>(null);
   const loadingMsg = usePosterLoadingMsg(loading);
@@ -341,17 +344,28 @@ function PosterTab() {
   }
 
   async function generate() {
-    if (!product.trim()) { toast.error("Add a product name first"); return; }
+    if (!product.trim()) { toast.error(t("t.needProduct")); return; }
+    const newSeed = Date.now() + Math.floor(Math.random() * 100000);
+    setSeed(newSeed);
+    setShuffleKey((k) => k + 1);
     setLoading(true);
     try {
-      const { result } = await callAI("poster", { product, price, style, tagline }, profile);
+      const { result } = await callAI("poster", { product, price, style, tagline, randomSeed: newSeed }, profile);
       const r = result as PosterCopy;
       setCopy({ headline: r.headline || product, tagline: r.tagline || "", cta: r.cta || "Order Now", price: price || r.price || "" });
       pushActivity(activity, setActivity, { type: "poster", title: `Poster: ${product}`, preview: r.tagline });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Try again");
+      toast.error(e instanceof Error ? e.message : t("t.tryAgain"));
     } finally {
       setLoading(false);
+    }
+  }
+
+  function switchStyle(s: PosterStyle) {
+    setStyle(s);
+    if (copy) {
+      setSeed(Date.now() + Math.floor(Math.random() * 100000));
+      setShuffleKey((k) => k + 1);
     }
   }
 
@@ -366,13 +380,13 @@ function PosterTab() {
         logging: false,
       });
       const link = document.createElement("a");
-      link.download = `${(product || "poster").replace(/\s+/g, "-").toLowerCase()}-1080.png`;
+      link.download = `SellerAI-poster.png`;
       link.href = canvas.toDataURL("image/png");
       link.click();
-      toast.success("Poster downloaded! 🎉");
+      toast.success(t("t.posterDownloaded"));
     } catch (err) {
       console.error(err);
-      toast.error("Couldn't capture the poster — try again");
+      toast.error(t("t.tryAgain"));
     } finally {
       setDownloading(false);
     }
@@ -382,7 +396,7 @@ function PosterTab() {
     <div className="space-y-5">
       <Card className="p-5 space-y-4">
         <div>
-          <Label>Product photo</Label>
+          <Label>{t("p.photo")}</Label>
           <div
             onClick={() => fileRef.current?.click()}
             onDragOver={(e) => e.preventDefault()}
@@ -394,8 +408,8 @@ function PosterTab() {
             ) : (
               <>
                 <Upload className="h-7 w-7 text-muted-foreground mx-auto mb-2" />
-                <div className="text-sm font-medium">Tap to upload or drag photo here</div>
-                <div className="text-xs text-muted-foreground mt-0.5">JPG, PNG up to ~5MB</div>
+                <div className="text-sm font-medium">{t("p.upload")}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">{t("p.uploadSub")}</div>
               </>
             )}
             <input ref={fileRef} type="file" accept="image/*" onChange={(e) => handleFile(e.target.files?.[0] || null)} className="hidden" />
@@ -403,30 +417,30 @@ function PosterTab() {
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label htmlFor="pp">Product name</Label>
+            <Label htmlFor="pp">{t("f.product")}</Label>
             <Input id="pp" value={product} onChange={(e) => setProduct(e.target.value)} placeholder="Kuih Lapis" className="mt-1.5" />
           </div>
           <div>
-            <Label htmlFor="pr">Price <span className="text-muted-foreground">(optional)</span></Label>
+            <Label htmlFor="pr">{t("p.price")} <span className="text-muted-foreground">{t("f.optional")}</span></Label>
             <Input id="pr" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="RM 12" className="mt-1.5" />
           </div>
         </div>
         <div>
-          <Label htmlFor="tg">Tagline hint <span className="text-muted-foreground">(optional, AI will polish)</span></Label>
+          <Label htmlFor="tg">{t("p.tagline")} <span className="text-muted-foreground">{t("p.taglineSub")}</span></Label>
           <Input id="tg" value={tagline} onChange={(e) => setTagline(e.target.value)} placeholder="Fresh from oven" className="mt-1.5" />
         </div>
         <div>
-          <Label>Poster style</Label>
+          <Label>{t("p.style")}</Label>
           <div className="grid grid-cols-2 gap-2 mt-1.5">
             {POSTER_STYLES.map((s) => (
-              <button key={s} type="button" onClick={() => setStyle(s)} className={`px-3 py-2 text-sm rounded-lg border transition-all ${style === s ? "bg-brand text-brand-foreground border-brand shadow-soft" : "bg-card border-border hover:bg-muted"}`}>
-                {s}
+              <button key={s} type="button" onClick={() => switchStyle(s)} className={`px-3 py-2 text-sm rounded-lg border transition-all ${style === s ? "bg-brand text-brand-foreground border-brand shadow-soft" : "bg-card border-border hover:bg-muted"}`}>
+                {posterStyleLabel(s, t)}
               </button>
             ))}
           </div>
         </div>
         <Button onClick={generate} disabled={loading} className="w-full bg-gradient-brand text-brand-foreground hover:opacity-90 h-12 text-base font-semibold shadow-soft">
-          🎨 {loading ? "Designing your poster..." : "Generate Poster"}
+          🎨 {loading ? t("p.designing") : t("p.gen")}
         </Button>
       </Card>
 
@@ -452,30 +466,43 @@ function PosterTab() {
       {copy && (
         <div className="space-y-3">
           {/* Scaled wrapper — actual poster renders at 1080x1080 inside */}
-          <div className="w-full max-w-sm mx-auto">
-            <ScaledPoster ref={posterRef} style={style} copy={copy} imgUrl={imgUrl} product={product} />
+          <div key={shuffleKey} className="w-full max-w-sm mx-auto poster-shuffle">
+            <ScaledPoster ref={posterRef} style={style} copy={copy} imgUrl={imgUrl} product={product} seed={seed} />
           </div>
-          <div className="flex gap-2 flex-wrap justify-center">
-            <Button onClick={downloadAsImage} disabled={downloading} className="bg-gradient-brand text-brand-foreground hover:opacity-90">
-              <Download className="h-4 w-4 mr-1.5" /> {downloading ? "Saving..." : "Download Poster"}
-            </Button>
-            <Button variant="outline" onClick={generate} disabled={loading}><RefreshCw className="h-4 w-4 mr-1.5" /> Regenerate</Button>
+          <div className="text-center text-[11px] text-muted-foreground -mt-1">
+            ✦ {posterStyleLabel(style, t)} · Layout {(seed % 4) + 1}
           </div>
+          <Button onClick={downloadAsImage} disabled={downloading} className="w-full max-w-sm mx-auto flex bg-[#059669] hover:bg-[#047857] text-white h-12 font-semibold rounded-xl">
+            <Download className="h-4 w-4 mr-2" /> {downloading ? t("p.downloading") : `⬇️ ${t("p.download")}`}
+          </Button>
+          <Button variant="outline" onClick={generate} disabled={loading} className="w-full max-w-sm mx-auto flex h-11">
+            <RefreshCw className="h-4 w-4 mr-2" /> 🔄 {t("btn.regen")}
+          </Button>
           <div className="pt-2">
-            <div className="text-xs text-center text-muted-foreground mb-2">Try another style</div>
+            <div className="text-xs text-center text-muted-foreground mb-2">{t("p.tryStyle")}</div>
             <div className="grid grid-cols-4 gap-2 max-w-sm mx-auto">
               {POSTER_STYLES.map((s) => (
-                <button key={s} type="button" onClick={() => setStyle(s)}
+                <button key={s} type="button" onClick={() => switchStyle(s)}
                   className={`px-2 py-2 text-[11px] leading-tight rounded-lg border transition-all ${style === s ? "bg-brand text-brand-foreground border-brand shadow-soft" : "bg-card border-border hover:bg-muted"}`}>
-                  {s}
+                  {posterStyleLabel(s, t)}
                 </button>
               ))}
             </div>
           </div>
+          <style>{`.poster-shuffle{animation:posterShuffle 280ms ease}@keyframes posterShuffle{0%{transform:scale(.95);opacity:.6}100%{transform:scale(1);opacity:1}}`}</style>
         </div>
       )}
     </div>
   );
+}
+
+function posterStyleLabel(s: PosterStyle, t: (k: string) => string) {
+  switch (s) {
+    case "Minimal Clean": return t("p.style.minimal");
+    case "Bold & Bright": return t("p.style.bold");
+    case "Rustic Handmade": return t("p.style.rustic");
+    case "Flash Sale": return t("p.style.flash");
+  }
 }
 
 /**
