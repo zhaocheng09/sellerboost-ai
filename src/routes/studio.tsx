@@ -84,6 +84,7 @@ function StudioPage() {
 
 /* ----------------------- CAPTION TAB ----------------------- */
 function CaptionTab() {
+  const { t } = useT();
   const [profile] = useLocalStorage<BusinessProfile>("sellerai.profile", defaultProfile);
   const [activity, setActivity] = useLocalStorage<ActivityItem[]>("sellerai.activity", []);
   const [saved, setSaved] = useLocalStorage<{ id: string; text: string; createdAt: number }[]>("sellerai.savedCaptions", []);
@@ -101,7 +102,7 @@ function CaptionTab() {
 
   async function generate() {
     if (!product.trim()) {
-      toast.error("Tell us your product name first 🙏");
+      toast.error(t("t.needProduct"));
       return;
     }
     setLoading(true);
@@ -113,7 +114,7 @@ function CaptionTab() {
       setResults(arr);
       pushActivity(activity, setActivity, { type: "caption", title: `Caption: ${product}`, preview: arr[0]?.slice(0, 120) });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Oops, let's try that again! 🔄");
+      toast.error(e instanceof Error ? e.message : t("t.tryAgain"));
     } finally {
       setLoading(false);
     }
@@ -152,16 +153,16 @@ function CaptionTab() {
     <div className="space-y-5">
       <Card className="p-5 space-y-4">
         <div>
-          <Label htmlFor="product">Product name</Label>
+          <Label htmlFor="product">{t("f.product")}</Label>
           <Input id="product" value={product} onChange={(e) => setProduct(e.target.value)} placeholder="e.g. Kuih Lapis Pandan" className="mt-1.5" />
         </div>
         <div>
-          <Label htmlFor="desc">Short description <span className="text-muted-foreground">(optional)</span></Label>
+          <Label htmlFor="desc">{t("f.shortDesc")} <span className="text-muted-foreground">{t("f.optional")}</span></Label>
           <Textarea id="desc" value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="pandan flavour, soft texture, 12 pieces per box" className="mt-1.5 min-h-20" />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label>Platform</Label>
+            <Label>{t("f.platform")}</Label>
             <Select value={platform} onValueChange={(v) => setPlatform(v as BusinessProfile["platform"])}>
               <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -173,25 +174,25 @@ function CaptionTab() {
             </Select>
           </div>
           <div>
-            <Label>Tone</Label>
+            <Label>{t("f.tone")}</Label>
             <Select value={tone} onValueChange={setTone}>
               <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="Friendly & Casual">Friendly & Casual</SelectItem>
-                <SelectItem value="Professional">Professional</SelectItem>
-                <SelectItem value="Cute & Playful">Cute & Playful</SelectItem>
-                <SelectItem value="Urgent (Flash Sale)">Urgent (Flash Sale)</SelectItem>
+                <SelectItem value="Friendly & Casual">{t("tone.friendly")}</SelectItem>
+                <SelectItem value="Professional">{t("tone.pro")}</SelectItem>
+                <SelectItem value="Cute & Playful">{t("tone.cute")}</SelectItem>
+                <SelectItem value="Urgent (Flash Sale)">{t("tone.urgent")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
         <div>
-          <Label>Language / Bahasa</Label>
+          <Label>{t("f.lang")}</Label>
           <div className="grid grid-cols-3 gap-2 mt-1.5">
             {[
-              { v: "en", l: "English" },
-              { v: "ms", l: "Bahasa" },
-              { v: "both", l: "Bilingual" },
+              { v: "en", l: t("lang.en") },
+              { v: "ms", l: t("lang.ms") },
+              { v: "both", l: t("lang.both") },
             ].map((opt) => (
               <button
                 key={opt.v}
@@ -208,7 +209,7 @@ function CaptionTab() {
         </div>
         <Button onClick={generate} disabled={loading} className="w-full bg-gradient-brand text-brand-foreground hover:opacity-90 h-12 text-base font-semibold shadow-soft">
           <Sparkles className="h-4 w-4 mr-2" />
-          {loading ? cookMsg : "Generate Caption"}
+          {loading ? cookMsg : t("btn.genCaption")}
         </Button>
       </Card>
 
@@ -229,18 +230,18 @@ function CaptionTab() {
           {results.map((text, idx) => (
             <Card key={idx} className="p-5">
               <div className="flex items-center justify-between mb-2">
-                <div className="text-xs font-semibold text-brand">Variation {idx + 1}</div>
+                <div className="text-xs font-semibold text-brand">{t("label.variation")} {idx + 1}</div>
               </div>
               <p className="text-sm whitespace-pre-wrap leading-relaxed">{text}</p>
               <div className="flex gap-2 mt-4 flex-wrap">
-                <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(text); toast.success("Caption copied! ✅"); }}>
-                  <Copy className="h-3.5 w-3.5 mr-1.5" /> Copy
+                <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(text); toast.success(t("t.captionCopied")); }}>
+                  <Copy className="h-3.5 w-3.5 mr-1.5" /> {t("btn.copy")}
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => regenerateOne(idx)} disabled={loading}>
-                  <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Regenerate
+                  <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> {t("btn.regen")}
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => { setSaved([{ id: crypto.randomUUID(), text, createdAt: Date.now() }, ...saved].slice(0, 50)); toast.success("Caption saved! 🎉"); }}>
-                  <Save className="h-3.5 w-3.5 mr-1.5" /> Save
+                <Button size="sm" variant="outline" onClick={() => { setSaved([{ id: crypto.randomUUID(), text, createdAt: Date.now() }, ...saved].slice(0, 50)); toast.success(t("t.captionSaved")); }}>
+                  <Save className="h-3.5 w-3.5 mr-1.5" /> {t("btn.save")}
                 </Button>
               </div>
             </Card>
@@ -248,15 +249,15 @@ function CaptionTab() {
 
           <Button onClick={genHashtags} disabled={hashLoading} variant="outline" className="w-full h-11">
             <Hash className="h-4 w-4 mr-2" />
-            {hashLoading ? "Mixing hashtags..." : "Generate Hashtags"}
+            {hashLoading ? "..." : t("btn.genHashtags")}
           </Button>
 
           {hashtags.length > 0 && (
             <Card className="p-5">
               <div className="flex items-center justify-between mb-3">
-                <div className="text-sm font-semibold">Hashtags</div>
-                <Button size="sm" variant="ghost" onClick={() => { navigator.clipboard.writeText(hashtags.join(" ")); toast.success("Hashtags copied! ✅"); }}>
-                  <Copy className="h-3.5 w-3.5 mr-1.5" /> Copy all
+                <div className="text-sm font-semibold">{t("label.hashtags")}</div>
+                <Button size="sm" variant="ghost" onClick={() => { navigator.clipboard.writeText(hashtags.join(" ")); toast.success(t("t.hashCopied")); }}>
+                  <Copy className="h-3.5 w-3.5 mr-1.5" /> {t("btn.copyAll")}
                 </Button>
               </div>
               <div className="flex flex-wrap gap-1.5">
