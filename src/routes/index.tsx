@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Wand2, Image as ImageIcon, Calculator, PackagePlus, Sparkles, TrendingUp } from "lucide-react";
 import { useLocalStorage, type ActivityItem, type BusinessProfile, defaultProfile } from "@/lib/storage";
 import { Card } from "@/components/ui/card";
+import { useT } from "@/lib/i18n";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -13,23 +14,19 @@ export const Route = createFileRoute("/")({
   component: HomePage,
 });
 
-function greeting() {
-  const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 18) return "Good afternoon";
-  return "Good evening";
-}
-
 const QUICK = [
-  { to: "/studio", label: "Generate Caption", sub: "Tulis caption", icon: Wand2, tab: "caption" },
-  { to: "/studio", label: "Create Poster", sub: "Buat poster", icon: ImageIcon, tab: "poster" },
-  { to: "/calculator", label: "Calculate Profit", sub: "Kira untung", icon: Calculator },
-  { to: "/inventory", label: "Update Stock", sub: "Update stok", icon: PackagePlus },
+  { to: "/studio", key: "home.gen.caption", subKey: "home.gen.caption.sub", icon: Wand2, tab: "caption" },
+  { to: "/studio", key: "home.gen.poster", subKey: "home.gen.poster.sub", icon: ImageIcon, tab: "poster" },
+  { to: "/calculator", key: "home.gen.profit", subKey: "home.gen.profit.sub", icon: Calculator },
+  { to: "/inventory", key: "home.gen.stock", subKey: "home.gen.stock.sub", icon: PackagePlus },
 ] as const;
 
 function HomePage() {
   const [profile] = useLocalStorage<BusinessProfile>("sellerai.profile", defaultProfile);
   const [activity] = useLocalStorage<ActivityItem[]>("sellerai.activity", []);
+  const { t } = useT();
+  const h = new Date().getHours();
+  const greet = h < 12 ? t("g.morning") : h < 18 ? t("g.afternoon") : t("g.evening");
 
   const monthCount = activity.filter((a) => {
     const d = new Date(a.createdAt);
@@ -42,21 +39,19 @@ function HomePage() {
   return (
     <div className="space-y-8">
       <header>
-        <p className="text-sm text-muted-foreground">{greeting()},</p>
+        <p className="text-sm text-muted-foreground">{greet},</p>
         <h1 className="text-3xl md:text-4xl font-bold mt-1">{name}! 👋</h1>
-        <p className="text-muted-foreground mt-2 text-sm">
-          Apa nak buat hari ini? Let's grow your business.
-        </p>
+        <p className="text-muted-foreground mt-2 text-sm">{t("home.subtitle")}</p>
       </header>
 
       <section>
-        <h2 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-3">Quick actions</h2>
+        <h2 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-3">{t("home.quickActions")}</h2>
         <div className="grid grid-cols-2 gap-3">
           {QUICK.map((q) => {
             const Icon = q.icon;
             return (
               <Link
-                key={q.label}
+                key={q.key}
                 to={q.to}
                 search={"tab" in q ? { tab: q.tab } : undefined}
                 className="group relative overflow-hidden rounded-2xl bg-card border border-border p-4 shadow-card hover:shadow-soft transition-all active:scale-[0.98]"
@@ -64,8 +59,8 @@ function HomePage() {
                 <div className="h-10 w-10 rounded-xl bg-gradient-brand flex items-center justify-center mb-3 shadow-soft">
                   <Icon className="h-5 w-5 text-brand-foreground" />
                 </div>
-                <div className="font-semibold text-sm">{q.label}</div>
-                <div className="text-xs text-muted-foreground mt-0.5">{q.sub}</div>
+                <div className="font-semibold text-sm">{t(q.key)}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">{t(q.subKey)}</div>
               </Link>
             );
           })}
@@ -78,20 +73,20 @@ function HomePage() {
             <TrendingUp className="h-5 w-5 text-brand" />
           </div>
           <div>
-            <div className="text-xs text-accent-foreground/80 font-medium">This month</div>
+            <div className="text-xs text-accent-foreground/80 font-medium">{t("home.thisMonth")}</div>
             <div className="text-lg font-bold text-accent-foreground">
-              {monthCount === 0 ? "Let's create your first post! 🚀" : `${monthCount} ${monthCount === 1 ? "post" : "posts"} created 🎉`}
+              {monthCount === 0 ? t("home.firstPost") : t("home.postsCreated", { n: monthCount })}
             </div>
           </div>
         </div>
       </section>
 
       <section>
-        <h2 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-3">Recent activity</h2>
+        <h2 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-3">{t("home.recent")}</h2>
         {activity.length === 0 ? (
           <Card className="p-8 text-center border-dashed">
             <Sparkles className="h-8 w-8 text-brand mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">Nothing yet — your generated captions and posters will appear here.</p>
+            <p className="text-sm text-muted-foreground">{t("home.empty")}</p>
           </Card>
         ) : (
           <div className="space-y-2">
