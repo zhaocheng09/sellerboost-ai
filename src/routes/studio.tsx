@@ -471,7 +471,7 @@ function PosterTab() {
             <ScaledPoster ref={posterRef} style={style} copy={copy} imgUrl={imgUrl} product={product} seed={seed} />
           </div>
           <div className="text-center text-[11px] text-muted-foreground -mt-1">
-            ✦ {posterStyleLabel(style, t)} · Layout {(seed % 4) + 1}
+            ✦ {posterStyleLabel(style, t)} · Layout {(Math.abs(seed) % 5) + 1} · Font {(Math.abs(Math.floor(seed / 7)) % 6) + 1} · Accent {(Math.abs(Math.floor(seed / 17)) % 8) + 1}
           </div>
           <Button onClick={downloadAsImage} disabled={downloading} className="w-full max-w-sm mx-auto flex bg-[#059669] hover:bg-[#047857] text-white h-12 font-semibold rounded-xl">
             <Download className="h-4 w-4 mr-2" /> {downloading ? t("p.downloading") : `⬇️ ${t("p.download")}`}
