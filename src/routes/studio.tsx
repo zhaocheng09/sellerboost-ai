@@ -380,7 +380,8 @@ function PosterTab() {
         logging: false,
       });
       const link = document.createElement("a");
-      link.download = `SellerAI-poster.png`;
+      const slug = (product || "poster").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "poster";
+      link.download = `SellerAI-${slug}-poster.png`;
       link.href = canvas.toDataURL("image/png");
       link.click();
       toast.success(t("t.posterDownloaded"));
@@ -470,7 +471,7 @@ function PosterTab() {
             <ScaledPoster ref={posterRef} style={style} copy={copy} imgUrl={imgUrl} product={product} seed={seed} />
           </div>
           <div className="text-center text-[11px] text-muted-foreground -mt-1">
-            ✦ {posterStyleLabel(style, t)} · Layout {(seed % 4) + 1}
+            ✦ {posterStyleLabel(style, t)} · Layout {(Math.abs(seed) % 5) + 1} · Font {(Math.abs(Math.floor(seed / 7)) % 6) + 1} · Accent {(Math.abs(Math.floor(seed / 17)) % 8) + 1}
           </div>
           <Button onClick={downloadAsImage} disabled={downloading} className="w-full max-w-sm mx-auto flex bg-[#059669] hover:bg-[#047857] text-white h-12 font-semibold rounded-xl">
             <Download className="h-4 w-4 mr-2" /> {downloading ? t("p.downloading") : `⬇️ ${t("p.download")}`}
@@ -535,28 +536,70 @@ const ScaledPoster = ({ style, copy, imgUrl, product, seed, ref }: {
   );
 };
 
+/** Independent axis selection from a single seed using prime offsets so
+ *  every click visibly changes layout, fonts, accent, intensity, badge, etc. */
+function getRandomConfig(seed: number) {
+  const pick = <T,>(arr: readonly T[], offset: number) => arr[Math.abs(Math.floor(seed / offset)) % arr.length];
+  const LAYOUTS = ["BOTTOM_LEFT", "BOTTOM_CENTER", "TOP_OVERLAY", "CENTER_DRAMA", "SPLIT"] as const;
+  const FONTS = [
+    { h: "'Anton', sans-serif", b: "'Plus Jakarta Sans', sans-serif", w: 800 },
+    { h: "'Bebas Neue', sans-serif", b: "'DM Sans', sans-serif", w: 700 },
+    { h: "'Black Han Sans', sans-serif", b: "'Inter', sans-serif", w: 800 },
+    { h: "'Oswald', sans-serif", b: "'Plus Jakarta Sans', sans-serif", w: 700 },
+    { h: "'Barlow Condensed', sans-serif", b: "'DM Sans', sans-serif", w: 800 },
+    { h: "'Righteous', sans-serif", b: "'Inter', sans-serif", w: 700 },
+  ];
+  const HEADING_SIZES = [
+    { size: 130, ls: "-0.03em", tt: "none" as const },
+    { size: 108, ls: "-0.02em", tt: "none" as const },
+    { size: 84,  ls: "0.04em",  tt: "none" as const },
+    { size: 70,  ls: "0.18em",  tt: "uppercase" as const },
+  ];
+  const ACCENTS = ["#FFD700", "#FF6B6B", "#6EE7B7", "#BAE6FD", "#FDA4AF", "#BEF264", "#FCD34D", "#FFFFFF"];
+  const BADGES = ["pill", "sharp", "rotated", "circle", "underline"] as const;
+  const TAGLINE_POS = ["above", "below", "footer"] as const;
+  const VIGNETTES = ["edge", "bottom", "dual"] as const;
+  const INTENSITIES = [0.35, 0.52, 0.68, 0.78];
+  const GRADIENT_DIRS = [
+    "linear-gradient(to top, {c} 0%, transparent 70%)",
+    "linear-gradient(to bottom, {c} 0%, transparent 70%)",
+    "linear-gradient(to left, {c} 0%, transparent 70%)",
+    "linear-gradient(135deg, {c} 0%, transparent 70%)",
+    "radial-gradient(ellipse at bottom, {c} 0%, transparent 70%)",
+    "radial-gradient(ellipse at center, transparent 0%, {c} 80%)",
+  ];
+  return {
+    layout: pick(LAYOUTS, 1),
+    font: pick(FONTS, 7),
+    heading: pick(HEADING_SIZES, 13),
+    accent: pick(ACCENTS, 17),
+    badge: pick(BADGES, 23),
+    taglinePos: pick(TAGLINE_POS, 29),
+    vignette: pick(VIGNETTES, 31),
+    intensity: pick(INTENSITIES, 37),
+    gradient: pick(GRADIENT_DIRS, 41),
+    layoutIdx: Math.abs(seed) % 5,
+  };
+}
+
 function PosterPreview({ style, copy, imgUrl, product, seed }: {
   style: PosterStyle; copy: PosterCopy; imgUrl: string | null; product: string; seed: number;
 }) {
   const photo = imgUrl || "https://images.unsplash.com/photo-1551024601-bec78aea704b?w=1200&q=80";
   const overlay = pickOverlayColor(product || copy.headline);
-
-  // Seeded variations
-  const layoutIdx = seed % 4;            // 0..3
-  const fontIdx = Math.floor(seed / 4) % 4;
-  const accentIdx = Math.floor(seed / 16) % 5;
-  const intensityIdx = Math.floor(seed / 64) % 3;
-  const ACCENTS = ["#FFD700", "#FF6B6B", "#6EE7B7", "#BAE6FD", "#FFFFFF"];
-  const FONTS = [
-    { h: "'Anton', sans-serif", b: "'Plus Jakarta Sans', sans-serif" },
-    { h: "'Bebas Neue', sans-serif", b: "'DM Sans', sans-serif" },
-    { h: "'Plus Jakarta Sans', sans-serif", b: "'DM Sans', sans-serif" },
-    { h: "'Anton', sans-serif", b: "'DM Sans', sans-serif" },
-  ];
-  const INTENSITIES = [0.45, 0.6, 0.72];
-  const accent = ACCENTS[accentIdx];
-  const fonts = FONTS[fontIdx];
-  const dim = INTENSITIES[intensityIdx];
+  const cfg = getRandomConfig(seed);
+  const accent = cfg.accent;
+  const fonts = { h: cfg.font.h, b: cfg.font.b };
+  const dim = cfg.intensity;
+  const layoutIdx = cfg.layoutIdx;
+  const intensityIdx = [0.35, 0.52, 0.68, 0.78].indexOf(dim);
+  const tintRgba = (a: number) => `rgba(${overlay.rgb},${a})`;
+  const vignetteStyle =
+    cfg.vignette === "edge"
+      ? { boxShadow: "inset 0 0 120px rgba(0,0,0,0.6)" }
+      : cfg.vignette === "bottom"
+      ? { boxShadow: "inset 0 -200px 100px -40px rgba(0,0,0,0.7)" }
+      : { boxShadow: "inset 0 -180px 80px -40px rgba(0,0,0,0.65), inset 0 120px 80px -40px rgba(0,0,0,0.5)" };
 
   // Common wrappers
   const Frame: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -566,7 +609,7 @@ function PosterPreview({ style, copy, imgUrl, product, seed }: {
         width: 1080,
         height: 1080,
         borderRadius: 28,
-        boxShadow: "inset 0 0 80px rgba(0,0,0,0.4)",
+        ...vignetteStyle,
       }}
     >
       {children}
@@ -574,13 +617,6 @@ function PosterPreview({ style, copy, imgUrl, product, seed }: {
       <div
         className="pointer-events-none absolute inset-0"
         style={{ backgroundImage: NOISE_SVG, opacity: 0.06, mixBlendMode: "overlay" }}
-      />
-      {/* Edge vignette */}
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background: "radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.35) 100%)",
-        }}
       />
     </div>
   );
@@ -595,19 +631,27 @@ function PosterPreview({ style, copy, imgUrl, product, seed }: {
   );
 
   if (style === "Minimal Clean") {
-    // Layout variations: 0=bottom-left, 1=bottom-center, 2=top-left, 3=center
-    const align = layoutIdx === 1 ? "center" : layoutIdx === 3 ? "center" : "left";
-    const isTop = layoutIdx === 2;
-    const isCenter = layoutIdx === 3;
-    const gradient = isTop
-      ? "linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 35%, rgba(0,0,0,0.55) 75%, rgba(0,0,0,0.85) 100%)"
-      : `linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,${0.2 + dim}) 75%, rgba(0,0,0,${0.4 + dim}) 100%)`;
+    // Use the layout axis from cfg (5 distinct positions)
+    const isTop = cfg.layout === "TOP_OVERLAY";
+    const isCenter = cfg.layout === "CENTER_DRAMA";
+    const isSplit = cfg.layout === "SPLIT";
+    const align: "left" | "center" =
+      cfg.layout === "BOTTOM_CENTER" || cfg.layout === "CENTER_DRAMA" ? "center" : "left";
+    // Use color-intelligence tint applied with the chosen gradient direction
+    const gradient = cfg.gradient.replaceAll("{c}", tintRgba(0.4 + dim));
     return (
       <Frame>
         {BgPhoto}
+        {isSplit && (
+          <div
+            className="absolute"
+            style={{ top: 0, bottom: 0, left: 0, width: "55%", background: tintRgba(0.55 + dim * 0.4) }}
+          />
+        )}
         <div className="absolute inset-0" style={{ background: gradient }} />
         <div className="absolute" style={{
-          left: 56, right: 56,
+          left: 56,
+          right: isSplit ? "50%" : 56,
           ...(isTop ? { top: 80 } : isCenter ? { top: "50%", transform: "translateY(-50%)" } : { bottom: 80 }),
           color: "white", textAlign: align as "left" | "center",
         }}>
@@ -617,6 +661,7 @@ function PosterPreview({ style, copy, imgUrl, product, seed }: {
                 fontFamily: fonts.b,
                 fontStyle: "italic",
                 fontSize: 22,
+                order: cfg.taglinePos === "below" ? 2 : 0,
                 color: "rgba(255,255,255,0.85)",
                 marginBottom: 18,
                 textShadow: "0 2px 18px rgba(0,0,0,0.7)",
@@ -630,13 +675,15 @@ function PosterPreview({ style, copy, imgUrl, product, seed }: {
           <div className={`flex items-end gap-6 ${align === "center" ? "justify-center flex-col" : "justify-between"}`}>
             <div
               style={{
-                fontFamily: fonts.b,
-                fontWeight: 800,
-                fontSize: layoutIdx === 1 ? 110 : 96,
+                fontFamily: fonts.h,
+                fontWeight: cfg.font.w,
+                fontSize: cfg.heading.size,
+                letterSpacing: cfg.heading.ls,
+                textTransform: cfg.heading.tt,
                 lineHeight: 0.95,
-                letterSpacing: "-0.03em",
                 textShadow: "0 4px 24px rgba(0,0,0,0.8)",
                 maxWidth: align === "center" ? "100%" : "70%",
+                color: cfg.taglinePos === "footer" ? accent : "white",
               }}
             >
               {copy.headline}
@@ -644,16 +691,30 @@ function PosterPreview({ style, copy, imgUrl, product, seed }: {
             {copy.price && (
               <div
                 style={{
-                  background: "rgba(255,255,255,0.18)",
-                  backdropFilter: "blur(20px)",
-                  WebkitBackdropFilter: "blur(20px)",
-                  border: "1px solid rgba(255,255,255,0.3)",
-                  borderRadius: 999,
-                  padding: "16px 28px",
+                  background: cfg.badge === "underline" ? "transparent"
+                    : cfg.badge === "circle" ? accent
+                    : "rgba(255,255,255,0.18)",
+                  backdropFilter: cfg.badge === "circle" || cfg.badge === "underline" ? undefined : "blur(20px)",
+                  WebkitBackdropFilter: cfg.badge === "circle" || cfg.badge === "underline" ? undefined : "blur(20px)",
+                  border: cfg.badge === "underline" ? "none" : "1px solid rgba(255,255,255,0.3)",
+                  borderBottom: cfg.badge === "underline" ? `4px solid ${accent}` : undefined,
+                  borderRadius:
+                    cfg.badge === "pill" ? 999
+                    : cfg.badge === "sharp" ? 6
+                    : cfg.badge === "rotated" ? 8
+                    : cfg.badge === "circle" ? "50%"
+                    : 0,
+                  transform: cfg.badge === "rotated" ? "rotate(-3deg)" : undefined,
+                  width: cfg.badge === "circle" ? 130 : undefined,
+                  height: cfg.badge === "circle" ? 130 : undefined,
+                  display: cfg.badge === "circle" ? "flex" : undefined,
+                  alignItems: cfg.badge === "circle" ? "center" : undefined,
+                  justifyContent: cfg.badge === "circle" ? "center" : undefined,
+                  padding: cfg.badge === "circle" ? 0 : cfg.badge === "underline" ? "4px 2px" : "16px 28px",
                   fontFamily: "'DM Sans', sans-serif",
                   fontWeight: 700,
-                  fontSize: 30,
-                  color: "white",
+                  fontSize: cfg.badge === "circle" ? 28 : 30,
+                  color: cfg.badge === "circle" ? "#0a0a0a" : "white",
                   whiteSpace: "nowrap",
                   textShadow: "0 2px 10px rgba(0,0,0,0.5)",
                 }}
@@ -662,6 +723,18 @@ function PosterPreview({ style, copy, imgUrl, product, seed }: {
               </div>
             )}
           </div>
+          {cfg.taglinePos === "footer" && copy.tagline && (
+            <div style={{
+              marginTop: 28,
+              fontFamily: fonts.b,
+              fontStyle: "italic",
+              fontSize: 18,
+              color: "rgba(255,255,255,0.7)",
+              textShadow: "0 2px 12px rgba(0,0,0,0.7)",
+            }}>
+              — {copy.tagline}
+            </div>
+          )}
         </div>
       </Frame>
     );
@@ -717,7 +790,7 @@ function PosterPreview({ style, copy, imgUrl, product, seed }: {
             style={{
               fontFamily: fonts.h,
               fontWeight: 900,
-              fontSize: [120, 140, 100][intensityIdx],
+              fontSize: [110, 130, 150, 130][intensityIdx] ?? 130,
               lineHeight: 0.88,
               textTransform: "uppercase",
               letterSpacing: "-0.01em",
