@@ -330,6 +330,7 @@ function PosterTab() {
   const [copy, setCopy] = useState<PosterCopy | null>(null);
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [downloaded, setDownloaded] = useState(false);
   const [seed, setSeed] = useState<number>(() => Date.now());
   const [shuffleKey, setShuffleKey] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -370,21 +371,25 @@ function PosterTab() {
   }
 
   async function downloadAsImage() {
-    if (!posterRef.current) return;
+    const element = document.getElementById("poster-canvas") || posterRef.current;
+    if (!element) return;
     setDownloading(true);
     try {
-      const canvas = await html2canvas(posterRef.current, {
+      const canvas = await html2canvas(element as HTMLElement, {
         backgroundColor: null,
         scale: 1, // poster already renders at 1080x1080
         useCORS: true,
+        allowTaint: true,
         logging: false,
       });
       const link = document.createElement("a");
       const slug = (product || "poster").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "poster";
-      link.download = `SellerAI-${slug}-poster.png`;
+      link.download = `SellerAI-${slug}-poster-${Date.now()}.png`;
       link.href = canvas.toDataURL("image/png");
       link.click();
       toast.success(t("t.posterDownloaded"));
+      setDownloaded(true);
+      setTimeout(() => setDownloaded(false), 1800);
     } catch (err) {
       console.error(err);
       toast.error(t("t.tryAgain"));
@@ -473,8 +478,21 @@ function PosterTab() {
           <div className="text-center text-[11px] text-muted-foreground -mt-1">
             ✦ {posterStyleLabel(style, t)} · Layout {(Math.abs(seed) % 5) + 1} · Font {(Math.abs(Math.floor(seed / 7)) % 6) + 1} · Accent {(Math.abs(Math.floor(seed / 17)) % 8) + 1}
           </div>
-          <Button onClick={downloadAsImage} disabled={downloading} className="w-full max-w-sm mx-auto flex bg-[#059669] hover:bg-[#047857] text-white h-12 font-semibold rounded-xl">
-            <Download className="h-4 w-4 mr-2" /> {downloading ? t("p.downloading") : `⬇️ ${t("p.download")}`}
+          <Button
+            onClick={downloadAsImage}
+            disabled={downloading}
+            className="w-full max-w-sm mx-auto flex bg-[#059669] hover:bg-[#047857] text-white h-12 font-semibold rounded-xl text-[15px]"
+            style={{ borderRadius: 12 }}
+          >
+            {downloading ? (
+              <>⏳ {t("p.downloading")}</>
+            ) : downloaded ? (
+              <>Downloaded! ✅</>
+            ) : (
+              <>
+                <Download className="h-4 w-4 mr-2" /> ⬇️ {t("p.download")}
+              </>
+            )}
           </Button>
           <Button variant="outline" onClick={generate} disabled={loading} className="w-full max-w-sm mx-auto flex h-11">
             <RefreshCw className="h-4 w-4 mr-2" /> 🔄 {t("btn.regen")}
@@ -528,7 +546,7 @@ const ScaledPoster = ({ style, copy, imgUrl, product, seed, ref }: {
   return (
     <div ref={wrapRef} className="w-full" style={{ aspectRatio: "1 / 1" }}>
       <div style={{ width: 1080, height: 1080, transform: `scale(${scale})`, transformOrigin: "top left" }}>
-        <div ref={ref} style={{ width: 1080, height: 1080 }}>
+        <div id="poster-canvas" ref={ref} style={{ width: 1080, height: 1080 }}>
           <PosterPreview style={style} copy={copy} imgUrl={imgUrl} product={product} seed={seed} />
         </div>
       </div>
