@@ -539,7 +539,7 @@ const ScaledPoster = ({ style, copy, imgUrl, product, seed, ref }: {
 /** Independent axis selection from a single seed using prime offsets so
  *  every click visibly changes layout, fonts, accent, intensity, badge, etc. */
 function getRandomConfig(seed: number) {
-  const pick = <T,>(arr: T[], offset: number) => arr[Math.abs(Math.floor(seed / offset)) % arr.length];
+  const pick = <T,>(arr: readonly T[], offset: number) => arr[Math.abs(Math.floor(seed / offset)) % arr.length];
   const LAYOUTS = ["BOTTOM_LEFT", "BOTTOM_CENTER", "TOP_OVERLAY", "CENTER_DRAMA", "SPLIT"] as const;
   const FONTS = [
     { h: "'Anton', sans-serif", b: "'Plus Jakarta Sans', sans-serif", w: 800 },
