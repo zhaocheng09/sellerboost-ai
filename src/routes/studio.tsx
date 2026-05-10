@@ -546,7 +546,7 @@ const ScaledPoster = ({ style, copy, imgUrl, product, seed, ref }: {
   return (
     <div ref={wrapRef} className="w-full" style={{ aspectRatio: "1 / 1" }}>
       <div style={{ width: 1080, height: 1080, transform: `scale(${scale})`, transformOrigin: "top left" }}>
-        <div ref={ref} style={{ width: 1080, height: 1080 }}>
+        <div id="poster-canvas" ref={ref} style={{ width: 1080, height: 1080 }}>
           <PosterPreview style={style} copy={copy} imgUrl={imgUrl} product={product} seed={seed} />
         </div>
       </div>
