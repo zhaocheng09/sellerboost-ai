@@ -790,7 +790,7 @@ function PosterPreview({ style, copy, imgUrl, product, seed }: {
             style={{
               fontFamily: fonts.h,
               fontWeight: 900,
-              fontSize: [120, 140, 100][intensityIdx],
+              fontSize: [110, 130, 150, 130][intensityIdx] ?? 130,
               lineHeight: 0.88,
               textTransform: "uppercase",
               letterSpacing: "-0.01em",
