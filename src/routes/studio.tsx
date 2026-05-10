@@ -380,7 +380,8 @@ function PosterTab() {
         logging: false,
       });
       const link = document.createElement("a");
-      link.download = `SellerAI-poster.png`;
+      const slug = (product || "poster").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "poster";
+      link.download = `SellerAI-${slug}-poster.png`;
       link.href = canvas.toDataURL("image/png");
       link.click();
       toast.success(t("t.posterDownloaded"));
