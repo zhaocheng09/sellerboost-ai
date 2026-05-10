@@ -642,9 +642,16 @@ function PosterPreview({ style, copy, imgUrl, product, seed }: {
     return (
       <Frame>
         {BgPhoto}
+        {isSplit && (
+          <div
+            className="absolute"
+            style={{ top: 0, bottom: 0, left: 0, width: "55%", background: tintRgba(0.55 + dim * 0.4) }}
+          />
+        )}
         <div className="absolute inset-0" style={{ background: gradient }} />
         <div className="absolute" style={{
-          left: 56, right: 56,
+          left: 56,
+          right: isSplit ? "50%" : 56,
           ...(isTop ? { top: 80 } : isCenter ? { top: "50%", transform: "translateY(-50%)" } : { bottom: 80 }),
           color: "white", textAlign: align as "left" | "center",
         }}>
@@ -654,6 +661,7 @@ function PosterPreview({ style, copy, imgUrl, product, seed }: {
                 fontFamily: fonts.b,
                 fontStyle: "italic",
                 fontSize: 22,
+                order: cfg.taglinePos === "below" ? 2 : 0,
                 color: "rgba(255,255,255,0.85)",
                 marginBottom: 18,
                 textShadow: "0 2px 18px rgba(0,0,0,0.7)",
@@ -667,13 +675,15 @@ function PosterPreview({ style, copy, imgUrl, product, seed }: {
           <div className={`flex items-end gap-6 ${align === "center" ? "justify-center flex-col" : "justify-between"}`}>
             <div
               style={{
-                fontFamily: fonts.b,
-                fontWeight: 800,
-                fontSize: layoutIdx === 1 ? 110 : 96,
+                fontFamily: fonts.h,
+                fontWeight: cfg.font.w,
+                fontSize: cfg.heading.size,
+                letterSpacing: cfg.heading.ls,
+                textTransform: cfg.heading.tt,
                 lineHeight: 0.95,
-                letterSpacing: "-0.03em",
                 textShadow: "0 4px 24px rgba(0,0,0,0.8)",
                 maxWidth: align === "center" ? "100%" : "70%",
+                color: cfg.taglinePos === "footer" ? accent : "white",
               }}
             >
               {copy.headline}
@@ -681,16 +691,30 @@ function PosterPreview({ style, copy, imgUrl, product, seed }: {
             {copy.price && (
               <div
                 style={{
-                  background: "rgba(255,255,255,0.18)",
-                  backdropFilter: "blur(20px)",
-                  WebkitBackdropFilter: "blur(20px)",
-                  border: "1px solid rgba(255,255,255,0.3)",
-                  borderRadius: 999,
-                  padding: "16px 28px",
+                  background: cfg.badge === "underline" ? "transparent"
+                    : cfg.badge === "circle" ? accent
+                    : "rgba(255,255,255,0.18)",
+                  backdropFilter: cfg.badge === "circle" || cfg.badge === "underline" ? undefined : "blur(20px)",
+                  WebkitBackdropFilter: cfg.badge === "circle" || cfg.badge === "underline" ? undefined : "blur(20px)",
+                  border: cfg.badge === "underline" ? "none" : "1px solid rgba(255,255,255,0.3)",
+                  borderBottom: cfg.badge === "underline" ? `4px solid ${accent}` : undefined,
+                  borderRadius:
+                    cfg.badge === "pill" ? 999
+                    : cfg.badge === "sharp" ? 6
+                    : cfg.badge === "rotated" ? 8
+                    : cfg.badge === "circle" ? "50%"
+                    : 0,
+                  transform: cfg.badge === "rotated" ? "rotate(-3deg)" : undefined,
+                  width: cfg.badge === "circle" ? 130 : undefined,
+                  height: cfg.badge === "circle" ? 130 : undefined,
+                  display: cfg.badge === "circle" ? "flex" : undefined,
+                  alignItems: cfg.badge === "circle" ? "center" : undefined,
+                  justifyContent: cfg.badge === "circle" ? "center" : undefined,
+                  padding: cfg.badge === "circle" ? 0 : cfg.badge === "underline" ? "4px 2px" : "16px 28px",
                   fontFamily: "'DM Sans', sans-serif",
                   fontWeight: 700,
-                  fontSize: 30,
-                  color: "white",
+                  fontSize: cfg.badge === "circle" ? 28 : 30,
+                  color: cfg.badge === "circle" ? "#0a0a0a" : "white",
                   whiteSpace: "nowrap",
                   textShadow: "0 2px 10px rgba(0,0,0,0.5)",
                 }}
@@ -699,6 +723,18 @@ function PosterPreview({ style, copy, imgUrl, product, seed }: {
               </div>
             )}
           </div>
+          {cfg.taglinePos === "footer" && copy.tagline && (
+            <div style={{
+              marginTop: 28,
+              fontFamily: fonts.b,
+              fontStyle: "italic",
+              fontSize: 18,
+              color: "rgba(255,255,255,0.7)",
+              textShadow: "0 2px 12px rgba(0,0,0,0.7)",
+            }}>
+              — {copy.tagline}
+            </div>
+          )}
         </div>
       </Frame>
     );
