@@ -34,11 +34,15 @@ export const Route = createRootRoute({
       { title: "SellerAI — AI for Malaysian micro-entrepreneurs" },
       { name: "description", content: "AI captions, posters, profit calculator and stock tracker built for Malaysian home bakers, handcraft sellers and stall owners." },
       { name: "author", content: "SellerAI" },
-      { property: "og:title", content: "SellerAI — AI Kedai" },
-      { property: "og:description", content: "Your pocket AI assistant: write captions, calculate profit, track stock." },
+      { property: "og:title", content: "SellerAI — AI for Malaysian micro-entrepreneurs" },
+      { property: "og:description", content: "AI captions, posters, profit calculator and stock tracker built for Malaysian home bakers, handcraft sellers and stall owners." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "SellerAI — AI for Malaysian micro-entrepreneurs" },
+      { name: "twitter:description", content: "AI captions, posters, profit calculator and stock tracker built for Malaysian home bakers, handcraft sellers and stall owners." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/59dc4d42-cef6-4ab4-a5da-0051ef336e79/id-preview-8ce8564c--11c2404e-e649-49f6-b9fa-2cf3daccc61a.lovable.app-1778375708413.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/59dc4d42-cef6-4ab4-a5da-0051ef336e79/id-preview-8ce8564c--11c2404e-e649-49f6-b9fa-2cf3daccc61a.lovable.app-1778375708413.png" },
     ],
     links: [
       {
