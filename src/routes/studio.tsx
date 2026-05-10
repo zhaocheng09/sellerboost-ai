@@ -536,28 +536,70 @@ const ScaledPoster = ({ style, copy, imgUrl, product, seed, ref }: {
   );
 };
 
+/** Independent axis selection from a single seed using prime offsets so
+ *  every click visibly changes layout, fonts, accent, intensity, badge, etc. */
+function getRandomConfig(seed: number) {
+  const pick = <T,>(arr: T[], offset: number) => arr[Math.abs(Math.floor(seed / offset)) % arr.length];
+  const LAYOUTS = ["BOTTOM_LEFT", "BOTTOM_CENTER", "TOP_OVERLAY", "CENTER_DRAMA", "SPLIT"] as const;
+  const FONTS = [
+    { h: "'Anton', sans-serif", b: "'Plus Jakarta Sans', sans-serif", w: 800 },
+    { h: "'Bebas Neue', sans-serif", b: "'DM Sans', sans-serif", w: 700 },
+    { h: "'Black Han Sans', sans-serif", b: "'Inter', sans-serif", w: 800 },
+    { h: "'Oswald', sans-serif", b: "'Plus Jakarta Sans', sans-serif", w: 700 },
+    { h: "'Barlow Condensed', sans-serif", b: "'DM Sans', sans-serif", w: 800 },
+    { h: "'Righteous', sans-serif", b: "'Inter', sans-serif", w: 700 },
+  ];
+  const HEADING_SIZES = [
+    { size: 130, ls: "-0.03em", tt: "none" as const },
+    { size: 108, ls: "-0.02em", tt: "none" as const },
+    { size: 84,  ls: "0.04em",  tt: "none" as const },
+    { size: 70,  ls: "0.18em",  tt: "uppercase" as const },
+  ];
+  const ACCENTS = ["#FFD700", "#FF6B6B", "#6EE7B7", "#BAE6FD", "#FDA4AF", "#BEF264", "#FCD34D", "#FFFFFF"];
+  const BADGES = ["pill", "sharp", "rotated", "circle", "underline"] as const;
+  const TAGLINE_POS = ["above", "below", "footer"] as const;
+  const VIGNETTES = ["edge", "bottom", "dual"] as const;
+  const INTENSITIES = [0.35, 0.52, 0.68, 0.78];
+  const GRADIENT_DIRS = [
+    "linear-gradient(to top, {c} 0%, transparent 70%)",
+    "linear-gradient(to bottom, {c} 0%, transparent 70%)",
+    "linear-gradient(to left, {c} 0%, transparent 70%)",
+    "linear-gradient(135deg, {c} 0%, transparent 70%)",
+    "radial-gradient(ellipse at bottom, {c} 0%, transparent 70%)",
+    "radial-gradient(ellipse at center, transparent 0%, {c} 80%)",
+  ];
+  return {
+    layout: pick(LAYOUTS, 1),
+    font: pick(FONTS, 7),
+    heading: pick(HEADING_SIZES, 13),
+    accent: pick(ACCENTS, 17),
+    badge: pick(BADGES, 23),
+    taglinePos: pick(TAGLINE_POS, 29),
+    vignette: pick(VIGNETTES, 31),
+    intensity: pick(INTENSITIES, 37),
+    gradient: pick(GRADIENT_DIRS, 41),
+    layoutIdx: Math.abs(seed) % 5,
+  };
+}
+
 function PosterPreview({ style, copy, imgUrl, product, seed }: {
   style: PosterStyle; copy: PosterCopy; imgUrl: string | null; product: string; seed: number;
 }) {
   const photo = imgUrl || "https://images.unsplash.com/photo-1551024601-bec78aea704b?w=1200&q=80";
   const overlay = pickOverlayColor(product || copy.headline);
-
-  // Seeded variations
-  const layoutIdx = seed % 4;            // 0..3
-  const fontIdx = Math.floor(seed / 4) % 4;
-  const accentIdx = Math.floor(seed / 16) % 5;
-  const intensityIdx = Math.floor(seed / 64) % 3;
-  const ACCENTS = ["#FFD700", "#FF6B6B", "#6EE7B7", "#BAE6FD", "#FFFFFF"];
-  const FONTS = [
-    { h: "'Anton', sans-serif", b: "'Plus Jakarta Sans', sans-serif" },
-    { h: "'Bebas Neue', sans-serif", b: "'DM Sans', sans-serif" },
-    { h: "'Plus Jakarta Sans', sans-serif", b: "'DM Sans', sans-serif" },
-    { h: "'Anton', sans-serif", b: "'DM Sans', sans-serif" },
-  ];
-  const INTENSITIES = [0.45, 0.6, 0.72];
-  const accent = ACCENTS[accentIdx];
-  const fonts = FONTS[fontIdx];
-  const dim = INTENSITIES[intensityIdx];
+  const cfg = getRandomConfig(seed);
+  const accent = cfg.accent;
+  const fonts = { h: cfg.font.h, b: cfg.font.b };
+  const dim = cfg.intensity;
+  const layoutIdx = cfg.layoutIdx;
+  const intensityIdx = [0.35, 0.52, 0.68, 0.78].indexOf(dim);
+  const tintRgba = (a: number) => `rgba(${overlay.rgb},${a})`;
+  const vignetteStyle =
+    cfg.vignette === "edge"
+      ? { boxShadow: "inset 0 0 120px rgba(0,0,0,0.6)" }
+      : cfg.vignette === "bottom"
+      ? { boxShadow: "inset 0 -200px 100px -40px rgba(0,0,0,0.7)" }
+      : { boxShadow: "inset 0 -180px 80px -40px rgba(0,0,0,0.65), inset 0 120px 80px -40px rgba(0,0,0,0.5)" };
 
   // Common wrappers
   const Frame: React.FC<{ children: React.ReactNode }> = ({ children }) => (
