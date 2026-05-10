@@ -609,7 +609,7 @@ function PosterPreview({ style, copy, imgUrl, product, seed }: {
         width: 1080,
         height: 1080,
         borderRadius: 28,
-        boxShadow: "inset 0 0 80px rgba(0,0,0,0.4)",
+        ...vignetteStyle,
       }}
     >
       {children}
@@ -617,13 +617,6 @@ function PosterPreview({ style, copy, imgUrl, product, seed }: {
       <div
         className="pointer-events-none absolute inset-0"
         style={{ backgroundImage: NOISE_SVG, opacity: 0.06, mixBlendMode: "overlay" }}
-      />
-      {/* Edge vignette */}
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background: "radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.35) 100%)",
-        }}
       />
     </div>
   );
@@ -638,13 +631,14 @@ function PosterPreview({ style, copy, imgUrl, product, seed }: {
   );
 
   if (style === "Minimal Clean") {
-    // Layout variations: 0=bottom-left, 1=bottom-center, 2=top-left, 3=center
-    const align = layoutIdx === 1 ? "center" : layoutIdx === 3 ? "center" : "left";
-    const isTop = layoutIdx === 2;
-    const isCenter = layoutIdx === 3;
-    const gradient = isTop
-      ? "linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 35%, rgba(0,0,0,0.55) 75%, rgba(0,0,0,0.85) 100%)"
-      : `linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,${0.2 + dim}) 75%, rgba(0,0,0,${0.4 + dim}) 100%)`;
+    // Use the layout axis from cfg (5 distinct positions)
+    const isTop = cfg.layout === "TOP_OVERLAY";
+    const isCenter = cfg.layout === "CENTER_DRAMA";
+    const isSplit = cfg.layout === "SPLIT";
+    const align: "left" | "center" =
+      cfg.layout === "BOTTOM_CENTER" || cfg.layout === "CENTER_DRAMA" ? "center" : "left";
+    // Use color-intelligence tint applied with the chosen gradient direction
+    const gradient = cfg.gradient.replaceAll("{c}", tintRgba(0.4 + dim));
     return (
       <Frame>
         {BgPhoto}
