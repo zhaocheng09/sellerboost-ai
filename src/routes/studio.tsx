@@ -280,10 +280,11 @@ const POSTER_STYLES = ["Minimal Clean", "Bold & Bright", "Rustic Handmade", "Fla
 type PosterStyle = (typeof POSTER_STYLES)[number];
 
 const POSTER_LOADING_MSGS = [
-  "Sprinkling some magic on your poster... ✨",
-  "Making your product look irresistible... 🍫",
-  "Professional designer mode: ON 🎨",
-  "Your customers won't be able to scroll past this... 👀",
+  "Reading your product... 📖",
+  "Choosing the perfect layout... 🎨",
+  "Making it impossible to scroll past... 👀",
+  "Adding the final touches... ✨",
+  "Almost ready to go viral... 🔥",
 ];
 
 function usePosterLoadingMsg(loading: boolean) {
