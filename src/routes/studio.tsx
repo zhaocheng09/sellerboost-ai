@@ -331,10 +331,10 @@ function PosterTab() {
   const [style, setStyle] = useState<PosterStyle>("Minimal Clean");
   const [copy, setCopy] = useState<PosterCopy | null>(null);
   const [loading, setLoading] = useState(false);
-  const [downloading, setDownloading] = useState(false);
-  const [downloaded, setDownloaded] = useState(false);
+  const [downloadState, setDownloadState] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [seed, setSeed] = useState<number>(() => Date.now());
   const [shuffleKey, setShuffleKey] = useState(0);
+  const [variantNum, setVariantNum] = useState<number>(() => Math.floor(Math.random() * 900) + 100);
   const fileRef = useRef<HTMLInputElement>(null);
   const posterRef = useRef<HTMLDivElement>(null);
   const loadingMsg = usePosterLoadingMsg(loading);
@@ -351,11 +351,12 @@ function PosterTab() {
     const newSeed = Date.now() + Math.floor(Math.random() * 100000);
     setSeed(newSeed);
     setShuffleKey((k) => k + 1);
+    setVariantNum(Math.floor(Math.random() * 900) + 100);
     setLoading(true);
     try {
       const { result } = await callAI("poster", { product, price, style, tagline, randomSeed: newSeed }, profile);
       const r = result as PosterCopy;
-      setCopy({ headline: r.headline || product, tagline: r.tagline || "", cta: r.cta || "Order Now", price: price || r.price || "" });
+      setCopy({ headline: r.headline || product, tagline: r.tagline || tagline || "", cta: r.cta || "Order Now", price: price || r.price || "" });
       pushActivity(activity, setActivity, { type: "poster", title: `Poster: ${product}`, preview: r.tagline });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("t.tryAgain"));
@@ -369,34 +370,36 @@ function PosterTab() {
     if (copy) {
       setSeed(Date.now() + Math.floor(Math.random() * 100000));
       setShuffleKey((k) => k + 1);
+      setVariantNum(Math.floor(Math.random() * 900) + 100);
     }
   }
 
   async function downloadAsImage() {
-    const element = document.getElementById("poster-canvas") || posterRef.current;
+    const element = document.getElementById("poster-canvas-container");
     if (!element) return;
-    setDownloading(true);
+    setDownloadState("loading");
     try {
       const canvas = await html2canvas(element as HTMLElement, {
-        backgroundColor: null,
-        scale: 1, // poster already renders at 1080x1080
+        scale: 3,
         useCORS: true,
         allowTaint: true,
+        backgroundColor: null,
         logging: false,
+        imageTimeout: 15000,
       });
       const link = document.createElement("a");
       const slug = (product || "poster").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "poster";
-      link.download = `SellerAI-${slug}-poster-${Date.now()}.png`;
-      link.href = canvas.toDataURL("image/png");
+      link.download = `SellerAI-${slug}-${Date.now()}.png`;
+      link.href = canvas.toDataURL("image/png", 1.0);
+      document.body.appendChild(link);
       link.click();
-      toast.success(t("t.posterDownloaded"));
-      setDownloaded(true);
-      setTimeout(() => setDownloaded(false), 1800);
+      document.body.removeChild(link);
+      setDownloadState("success");
+      setTimeout(() => setDownloadState("idle"), 2000);
     } catch (err) {
       console.error(err);
-      toast.error(t("t.tryAgain"));
-    } finally {
-      setDownloading(false);
+      setDownloadState("error");
+      setTimeout(() => setDownloadState("idle"), 2500);
     }
   }
 
@@ -471,46 +474,58 @@ function PosterTab() {
         </div>
       )}
 
-      {copy && (
+      {copy && !loading && (
         <div className="space-y-3">
-          {/* Scaled wrapper — actual poster renders at 1080x1080 inside */}
-          <div key={shuffleKey} className="w-full max-w-sm mx-auto poster-shuffle">
+          <div key={shuffleKey} className="w-full max-w-sm mx-auto poster-fade-in">
             <ScaledPoster ref={posterRef} style={style} copy={copy} imgUrl={imgUrl} product={product} seed={seed} />
           </div>
           <div className="text-center text-[11px] text-muted-foreground -mt-1">
-            ✦ {posterStyleLabel(style, t)} · Layout {(Math.abs(seed) % 5) + 1} · Font {(Math.abs(Math.floor(seed / 7)) % 6) + 1} · Accent {(Math.abs(Math.floor(seed / 17)) % 8) + 1}
+            ✦ Generated variant #{variantNum}
           </div>
+
           <Button
             onClick={downloadAsImage}
-            disabled={downloading}
-            className="w-full max-w-sm mx-auto flex bg-[#059669] hover:bg-[#047857] text-white h-12 font-semibold rounded-xl text-[15px]"
-            style={{ borderRadius: 12 }}
+            disabled={downloadState === "loading"}
+            className="w-full max-w-sm mx-auto flex h-12 font-semibold rounded-xl text-[15px] text-white"
+            style={{
+              borderRadius: 12,
+              background:
+                downloadState === "error" ? "#DC2626"
+                : downloadState === "success" ? "#047857"
+                : downloadState === "loading" ? "#6B7280"
+                : "#059669",
+            }}
           >
-            {downloading ? (
-              <>⏳ {t("p.downloading")}</>
-            ) : downloaded ? (
-              <>Downloaded! ✅</>
-            ) : (
-              <>
-                <Download className="h-4 w-4 mr-2" /> ⬇️ {t("p.download")}
-              </>
+            {downloadState === "loading" && <>⏳ Saving your poster...</>}
+            {downloadState === "success" && <>✅ Downloaded!</>}
+            {downloadState === "error" && <>Download failed — try again</>}
+            {downloadState === "idle" && (
+              <><Download className="h-4 w-4 mr-2" /> ⬇️ Download Poster</>
             )}
           </Button>
-          <Button variant="outline" onClick={generate} disabled={loading} className="w-full max-w-sm mx-auto flex h-11">
-            <RefreshCw className="h-4 w-4 mr-2" /> 🔄 {t("btn.regen")}
-          </Button>
-          <div className="pt-2">
-            <div className="text-xs text-center text-muted-foreground mb-2">{t("p.tryStyle")}</div>
-            <div className="grid grid-cols-4 gap-2 max-w-sm mx-auto">
-              {POSTER_STYLES.map((s) => (
-                <button key={s} type="button" onClick={() => switchStyle(s)}
-                  className={`px-2 py-2 text-[11px] leading-tight rounded-lg border transition-all ${style === s ? "bg-brand text-brand-foreground border-brand shadow-soft" : "bg-card border-border hover:bg-muted"}`}>
-                  {posterStyleLabel(s, t)}
-                </button>
-              ))}
-            </div>
+
+          <div className="grid grid-cols-2 gap-2 max-w-sm mx-auto">
+            <Button variant="outline" onClick={generate} disabled={loading}
+              className="h-11 border-[#059669] text-[#059669] hover:bg-[#D1FAE5] hover:text-[#065F46]">
+              <RefreshCw className="h-4 w-4 mr-2" /> 🔄 Regenerate
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="h-11">
+                  🎨 Different Style <ChevronDown className="h-4 w-4 ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                {POSTER_STYLES.map((s) => (
+                  <DropdownMenuItem key={s} onClick={() => switchStyle(s)}>
+                    {style === s ? "✓ " : "  "}{posterStyleLabel(s, t)}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-          <style>{`.poster-shuffle{animation:posterShuffle 280ms ease}@keyframes posterShuffle{0%{transform:scale(.95);opacity:.6}100%{transform:scale(1);opacity:1}}`}</style>
+
+          <style>{`.poster-fade-in{animation:posterFadeIn 300ms ease-out}@keyframes posterFadeIn{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}`}</style>
         </div>
       )}
     </div>
@@ -526,10 +541,6 @@ function posterStyleLabel(s: PosterStyle, t: (k: string) => string) {
   }
 }
 
-/**
- * ScaledPoster renders the actual poster at 1080x1080 (so html2canvas captures
- * full resolution) inside a wrapper that scales it down to fit the preview.
- */
 const ScaledPoster = ({ style, copy, imgUrl, product, seed, ref }: {
   style: PosterStyle; copy: PosterCopy; imgUrl: string | null; product: string; seed: number;
   ref: React.RefObject<HTMLDivElement | null>;
@@ -548,7 +559,7 @@ const ScaledPoster = ({ style, copy, imgUrl, product, seed, ref }: {
   return (
     <div ref={wrapRef} className="w-full" style={{ aspectRatio: "1 / 1" }}>
       <div style={{ width: 1080, height: 1080, transform: `scale(${scale})`, transformOrigin: "top left" }}>
-        <div id="poster-canvas" ref={ref} style={{ width: 1080, height: 1080 }}>
+        <div id="poster-canvas-container" ref={ref} style={{ width: 1080, height: 1080 }}>
           <PosterPreview style={style} copy={copy} imgUrl={imgUrl} product={product} seed={seed} />
         </div>
       </div>
@@ -556,88 +567,64 @@ const ScaledPoster = ({ style, copy, imgUrl, product, seed, ref }: {
   );
 };
 
-/** Independent axis selection from a single seed using prime offsets so
- *  every click visibly changes layout, fonts, accent, intensity, badge, etc. */
+/** Randomize sub-variables on every Generate click. */
 function getRandomConfig(seed: number) {
   const pick = <T,>(arr: readonly T[], offset: number) => arr[Math.abs(Math.floor(seed / offset)) % arr.length];
-  const LAYOUTS = ["BOTTOM_LEFT", "BOTTOM_CENTER", "TOP_OVERLAY", "CENTER_DRAMA", "SPLIT"] as const;
-  const FONTS = [
-    { h: "'Anton', sans-serif", b: "'Plus Jakarta Sans', sans-serif", w: 800 },
-    { h: "'Bebas Neue', sans-serif", b: "'DM Sans', sans-serif", w: 700 },
-    { h: "'Black Han Sans', sans-serif", b: "'Inter', sans-serif", w: 800 },
-    { h: "'Oswald', sans-serif", b: "'Plus Jakarta Sans', sans-serif", w: 700 },
-    { h: "'Barlow Condensed', sans-serif", b: "'DM Sans', sans-serif", w: 800 },
-    { h: "'Righteous', sans-serif", b: "'Inter', sans-serif", w: 700 },
-  ];
-  const HEADING_SIZES = [
-    { size: 130, ls: "-0.03em", tt: "none" as const },
-    { size: 108, ls: "-0.02em", tt: "none" as const },
-    { size: 84,  ls: "0.04em",  tt: "none" as const },
-    { size: 70,  ls: "0.18em",  tt: "uppercase" as const },
-  ];
-  const ACCENTS = ["#FFD700", "#FF6B6B", "#6EE7B7", "#BAE6FD", "#FDA4AF", "#BEF264", "#FCD34D", "#FFFFFF"];
-  const BADGES = ["pill", "sharp", "rotated", "circle", "underline"] as const;
-  const TAGLINE_POS = ["above", "below", "footer"] as const;
-  const VIGNETTES = ["edge", "bottom", "dual"] as const;
-  const INTENSITIES = [0.35, 0.52, 0.68, 0.78];
-  const GRADIENT_DIRS = [
-    "linear-gradient(to top, {c} 0%, transparent 70%)",
-    "linear-gradient(to bottom, {c} 0%, transparent 70%)",
-    "linear-gradient(to left, {c} 0%, transparent 70%)",
-    "linear-gradient(135deg, {c} 0%, transparent 70%)",
-    "radial-gradient(ellipse at bottom, {c} 0%, transparent 70%)",
-    "radial-gradient(ellipse at center, transparent 0%, {c} 80%)",
-  ];
+  const FONTS = ["'Anton', sans-serif", "'Bebas Neue', sans-serif", "'Oswald', sans-serif", "'Barlow Condensed', sans-serif"] as const;
+  const OVERLAY_INTENSITIES = [0.38, 0.52, 0.65, 0.74] as const;
+  const ACCENTS = ["#FFD700", "#FF6B6B", "#6EE7B7", "#BAE6FD", "#FDA4AF", "#BEF264", "#FCD34D"] as const;
+  const TITLE_SIZES = [72, 60, 52, 80] as const;
+  const LETTER_SPACINGS = ["-2px", "-1px", "0px", "2px"] as const;
+  const GRADIENT_DIRS = ["to top", "to bottom", "135deg", "160deg"] as const;
   return {
-    layout: pick(LAYOUTS, 1),
     font: pick(FONTS, 7),
-    heading: pick(HEADING_SIZES, 13),
+    intensity: pick(OVERLAY_INTENSITIES, 13),
     accent: pick(ACCENTS, 17),
-    badge: pick(BADGES, 23),
-    taglinePos: pick(TAGLINE_POS, 29),
-    vignette: pick(VIGNETTES, 31),
-    intensity: pick(INTENSITIES, 37),
-    gradient: pick(GRADIENT_DIRS, 41),
-    layoutIdx: Math.abs(seed) % 5,
+    titleSize: pick(TITLE_SIZES, 23),
+    letterSpacing: pick(LETTER_SPACINGS, 29),
+    gradientDir: pick(GRADIENT_DIRS, 31),
   };
 }
+
+/* Ribbon color picker for Bold style */
+function pickRibbonColor(product: string): string {
+  const p = product.toLowerCase();
+  if (/chocolate|brownie|coffee|kopi|mocha|cocoa/.test(p)) return "#0A0400";
+  if (/matcha|pandan|green|mint|ulam/.test(p)) return "#010A03";
+  if (/strawberry|rose|ube|berry|purple|grape/.test(p)) return "#0A0108";
+  if (/vanilla|cream|cheese|butter|milk/.test(p)) return "#0A0804";
+  if (/mango|orange|citrus/.test(p)) return "#0A0500";
+  return "#050505";
+}
+
+const GRAIN_OVERLAY: React.CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  pointerEvents: "none",
+  backgroundImage: NOISE_SVG,
+  opacity: 0.04,
+  mixBlendMode: "overlay",
+  zIndex: 50,
+};
 
 function PosterPreview({ style, copy, imgUrl, product, seed }: {
   style: PosterStyle; copy: PosterCopy; imgUrl: string | null; product: string; seed: number;
 }) {
   const photo = imgUrl || "https://images.unsplash.com/photo-1551024601-bec78aea704b?w=1200&q=80";
-  const overlay = pickOverlayColor(product || copy.headline);
   const cfg = getRandomConfig(seed);
-  const accent = cfg.accent;
-  const fonts = { h: cfg.font.h, b: cfg.font.b };
-  const dim = cfg.intensity;
-  const layoutIdx = cfg.layoutIdx;
-  const intensityIdx = [0.35, 0.52, 0.68, 0.78].indexOf(dim);
-  const tintRgba = (a: number) => `rgba(${overlay.rgb},${a})`;
-  const vignetteStyle =
-    cfg.vignette === "edge"
-      ? { boxShadow: "inset 0 0 120px rgba(0,0,0,0.6)" }
-      : cfg.vignette === "bottom"
-      ? { boxShadow: "inset 0 -200px 100px -40px rgba(0,0,0,0.7)" }
-      : { boxShadow: "inset 0 -180px 80px -40px rgba(0,0,0,0.65), inset 0 120px 80px -40px rgba(0,0,0,0.5)" };
 
-  // Common wrappers
   const Frame: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <div
       className="relative overflow-hidden"
       style={{
         width: 1080,
         height: 1080,
-        borderRadius: 28,
-        ...vignetteStyle,
+        borderRadius: 16,
+        boxShadow: "inset 0 0 150px rgba(0,0,0,0.5)",
       }}
     >
       {children}
-      {/* Noise grain overlay */}
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{ backgroundImage: NOISE_SVG, opacity: 0.06, mixBlendMode: "overlay" }}
-      />
+      <div style={GRAIN_OVERLAY} />
     </div>
   );
 
@@ -650,442 +637,242 @@ function PosterPreview({ style, copy, imgUrl, product, seed }: {
     />
   );
 
-  if (style === "Minimal Clean") {
-    // Use the layout axis from cfg (5 distinct positions)
-    const isTop = cfg.layout === "TOP_OVERLAY";
-    const isCenter = cfg.layout === "CENTER_DRAMA";
-    const isSplit = cfg.layout === "SPLIT";
-    const align: "left" | "center" =
-      cfg.layout === "BOTTOM_CENTER" || cfg.layout === "CENTER_DRAMA" ? "center" : "left";
-    // Use color-intelligence tint applied with the chosen gradient direction
-    const gradient = cfg.gradient.replaceAll("{c}", tintRgba(0.4 + dim));
-    return (
-      <Frame>
-        {BgPhoto}
-        {isSplit && (
-          <div
-            className="absolute"
-            style={{ top: 0, bottom: 0, left: 0, width: "55%", background: tintRgba(0.55 + dim * 0.4) }}
-          />
-        )}
-        <div className="absolute inset-0" style={{ background: gradient }} />
-        <div className="absolute" style={{
-          left: 56,
-          right: isSplit ? "50%" : 56,
-          ...(isTop ? { top: 80 } : isCenter ? { top: "50%", transform: "translateY(-50%)" } : { bottom: 80 }),
-          color: "white", textAlign: align as "left" | "center",
-        }}>
-          {copy.tagline && (
-            <div
-              style={{
-                fontFamily: fonts.b,
-                fontStyle: "italic",
-                fontSize: 22,
-                order: cfg.taglinePos === "below" ? 2 : 0,
-                color: "rgba(255,255,255,0.85)",
-                marginBottom: 18,
-                textShadow: "0 2px 18px rgba(0,0,0,0.7)",
-                textTransform: "uppercase",
-                letterSpacing: "0.25em",
-              }}
-            >
-              {copy.tagline}
-            </div>
-          )}
-          <div className={`flex items-end gap-6 ${align === "center" ? "justify-center flex-col" : "justify-between"}`}>
-            <div
-              style={{
-                fontFamily: fonts.h,
-                fontWeight: cfg.font.w,
-                fontSize: cfg.heading.size,
-                letterSpacing: cfg.heading.ls,
-                textTransform: cfg.heading.tt,
-                lineHeight: 0.95,
-                textShadow: "0 4px 24px rgba(0,0,0,0.8)",
-                maxWidth: align === "center" ? "100%" : "70%",
-                color: cfg.taglinePos === "footer" ? accent : "white",
-              }}
-            >
-              {copy.headline}
-            </div>
-            {copy.price && (
-              <div
-                style={{
-                  background: cfg.badge === "underline" ? "transparent"
-                    : cfg.badge === "circle" ? accent
-                    : "rgba(255,255,255,0.18)",
-                  backdropFilter: cfg.badge === "circle" || cfg.badge === "underline" ? undefined : "blur(20px)",
-                  WebkitBackdropFilter: cfg.badge === "circle" || cfg.badge === "underline" ? undefined : "blur(20px)",
-                  border: cfg.badge === "underline" ? "none" : "1px solid rgba(255,255,255,0.3)",
-                  borderBottom: cfg.badge === "underline" ? `4px solid ${accent}` : undefined,
-                  borderRadius:
-                    cfg.badge === "pill" ? 999
-                    : cfg.badge === "sharp" ? 6
-                    : cfg.badge === "rotated" ? 8
-                    : cfg.badge === "circle" ? "50%"
-                    : 0,
-                  transform: cfg.badge === "rotated" ? "rotate(-3deg)" : undefined,
-                  width: cfg.badge === "circle" ? 130 : undefined,
-                  height: cfg.badge === "circle" ? 130 : undefined,
-                  display: cfg.badge === "circle" ? "flex" : undefined,
-                  alignItems: cfg.badge === "circle" ? "center" : undefined,
-                  justifyContent: cfg.badge === "circle" ? "center" : undefined,
-                  padding: cfg.badge === "circle" ? 0 : cfg.badge === "underline" ? "4px 2px" : "16px 28px",
-                  fontFamily: "'DM Sans', sans-serif",
-                  fontWeight: 700,
-                  fontSize: cfg.badge === "circle" ? 28 : 30,
-                  color: cfg.badge === "circle" ? "#0a0a0a" : "white",
-                  whiteSpace: "nowrap",
-                  textShadow: "0 2px 10px rgba(0,0,0,0.5)",
-                }}
-              >
-                {copy.price}
-              </div>
-            )}
-          </div>
-          {cfg.taglinePos === "footer" && copy.tagline && (
-            <div style={{
-              marginTop: 28,
-              fontFamily: fonts.b,
-              fontStyle: "italic",
-              fontSize: 18,
-              color: "rgba(255,255,255,0.7)",
-              textShadow: "0 2px 12px rgba(0,0,0,0.7)",
-            }}>
-              — {copy.tagline}
-            </div>
-          )}
-        </div>
-      </Frame>
-    );
-  }
+  const TEXT_SHADOW = "0 2px 20px rgba(0,0,0,0.9)";
 
-  if (style === "Bold & Bright") {
-    const ribbonAlign = layoutIdx % 2 === 0 ? "left" : "center";
+  /* ---------- STYLE 1: MINIMAL CLEAN — Editorial Magazine ---------- */
+  if (style === "Minimal Clean") {
     return (
       <Frame>
         {BgPhoto}
-        <div className="absolute inset-0" style={{
-          background: layoutIdx === 2
-            ? "radial-gradient(ellipse at bottom left, rgba(0,0,0,0) 25%, rgba(0,0,0,0.7) 100%)"
-            : "radial-gradient(ellipse at center, rgba(0,0,0,0) 30%, rgba(0,0,0,0.7) 100%)",
-        }} />
-        {/* NEW DROP badge */}
+        {/* Bottom 45% gradient only */}
         <div
           className="absolute"
           style={{
-            top: 48,
-            right: 48,
-            background: accent === "#FFFFFF" ? "#FF3B30" : accent,
-            color: accent === "#FFFFFF" ? "white" : "#0a0a0a",
-            padding: "14px 28px",
-            borderRadius: layoutIdx === 0 ? 999 : layoutIdx === 1 ? 4 : layoutIdx === 2 ? 50 : 999,
-            transform: layoutIdx === 3 ? "rotate(-3deg)" : "none",
-            fontFamily: fonts.h,
-            fontSize: 28,
-            letterSpacing: "0.25em",
-            boxShadow: "0 8px 24px rgba(230,57,70,0.5)",
-          }}
-        >
-          NEW DROP
-        </div>
-        {/* Diagonal color stripe at bottom */}
-        <div
-          className="absolute"
-          style={{
-            left: -40,
-            right: -40,
-            bottom: 130,
-            height: 280,
-            background: overlay.hex,
-            transform: "skewY(-6deg)",
-            boxShadow: "0 -10px 40px rgba(0,0,0,0.4)",
+            left: 0, right: 0, bottom: 0, height: "55%",
+            background: "linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)",
           }}
         />
-        <div
-          className="absolute"
-          style={{ left: 56, right: 56, bottom: 130, color: "white", textAlign: ribbonAlign as "left" | "center" }}
-        >
-          <div
-            style={{
-              fontFamily: fonts.h,
-              fontWeight: 900,
-              fontSize: [110, 130, 150, 130][intensityIdx] ?? 130,
-              lineHeight: 0.88,
-              textTransform: "uppercase",
-              letterSpacing: "-0.01em",
-              textShadow: "0 6px 24px rgba(0,0,0,0.6)",
-            }}
-          >
-            {copy.headline}
-          </div>
+        {/* Bottom floating text */}
+        <div className="absolute" style={{ left: 64, right: 64, bottom: 80, color: "white" }}>
           {copy.tagline && (
-            <div
-              style={{
-                fontFamily: fonts.b,
-                fontWeight: 500,
-                fontSize: 24,
-                color: "rgba(255,255,255,0.85)",
-                marginTop: 12,
-                maxWidth: "85%",
-                textShadow: "0 2px 12px rgba(0,0,0,0.7)",
-              }}
-            >
-              {copy.tagline}
-            </div>
+            <div style={{
+              fontSize: 22, color: "rgba(255,255,255,0.7)", textTransform: "uppercase",
+              letterSpacing: "0.5em", fontStyle: "italic", marginBottom: 24,
+              fontFamily: "'Plus Jakarta Sans', sans-serif", textShadow: TEXT_SHADOW,
+            }}>{copy.tagline}</div>
           )}
-          <div className="flex items-center justify-between" style={{ marginTop: 24 }}>
+          <div style={{
+            fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800,
+            fontSize: cfg.titleSize * 1.7, letterSpacing: cfg.letterSpacing,
+            lineHeight: 1.0, color: "white", textShadow: TEXT_SHADOW,
+            maxWidth: "85%",
+          }}>{copy.headline}</div>
+          <div style={{ width: 80, height: 3, background: "rgba(255,255,255,0.5)", marginTop: 28 }} />
+          {copy.price && (
+            <div style={{
+              marginTop: 28, display: "inline-block",
+              background: "rgba(255,255,255,0.12)",
+              backdropFilter: "blur(20px) saturate(180%)",
+              WebkitBackdropFilter: "blur(20px) saturate(180%)",
+              border: "1px solid rgba(255,255,255,0.25)",
+              borderRadius: 999, padding: "16px 40px",
+              color: "white", fontSize: 30, fontWeight: 700,
+              fontFamily: "'Plus Jakarta Sans', sans-serif", textShadow: TEXT_SHADOW,
+            }}>{copy.price}</div>
+          )}
+        </div>
+        {/* Decorative ✦ bottom right */}
+        <div style={{
+          position: "absolute", right: 56, bottom: 56,
+          color: "rgba(255,255,255,0.3)", fontSize: 32,
+        }}>✦</div>
+      </Frame>
+    );
+  }
+
+  /* ---------- STYLE 2: BOLD & BRIGHT — Streetwear Drop ---------- */
+  if (style === "Bold & Bright") {
+    const ribbon = pickRibbonColor(product || copy.headline);
+    return (
+      <Frame>
+        {BgPhoto}
+        {/* Subtle corner vignette */}
+        <div className="absolute inset-0" style={{
+          background: "radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.55) 100%)",
+        }} />
+        {/* Solid dark ribbon bottom 38% */}
+        <div className="absolute" style={{
+          left: 0, right: 0, bottom: 0, height: "38%", background: ribbon,
+        }} />
+        {/* NEW DROP badge */}
+        <div style={{
+          position: "absolute", right: 56, bottom: `calc(38% + 32px)`,
+          background: "#FF3B30", color: "white",
+          padding: "10px 24px", borderRadius: 4,
+          fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700,
+          fontSize: 20, letterSpacing: "0.3em", textTransform: "uppercase",
+          boxShadow: "0 6px 24px rgba(255,59,48,0.5)",
+        }}>NEW DROP</div>
+        {/* Ribbon content */}
+        <div className="absolute" style={{
+          left: 56, right: 56, bottom: 56, color: "white",
+        }}>
+          {copy.tagline && (
+            <div style={{
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              fontSize: 22, color: "rgba(255,255,255,0.6)", marginBottom: 18,
+            }}>{copy.tagline}</div>
+          )}
+          <div style={{
+            fontFamily: cfg.font, fontWeight: 900,
+            fontSize: 136, lineHeight: 0.92,
+            textTransform: "uppercase", letterSpacing: "-0.01em",
+            color: "white", textShadow: TEXT_SHADOW,
+          }}>{copy.headline}</div>
+          <div className="flex items-center justify-between" style={{ marginTop: 32 }}>
             {copy.price && (
-              <div
-                style={{
-                  fontFamily: fonts.h,
-                  fontSize: 84,
-                  color: accent,
-                  letterSpacing: "-0.01em",
-                  textShadow: "0 4px 16px rgba(0,0,0,0.6)",
-                }}
-              >
-                {copy.price}
-              </div>
+              <div style={{
+                fontFamily: cfg.font, fontSize: 72, color: "#FFD700",
+                fontWeight: 700, textShadow: TEXT_SHADOW,
+              }}>{copy.price}</div>
             )}
-            <div
-              style={{
-                background: accent,
-                color: accent === "#FFFFFF" ? "#0a0a0a" : "#0a0a0a",
-                padding: "20px 36px",
-                borderRadius: 12,
-                fontFamily: "'Bebas Neue', sans-serif",
-                fontSize: 36,
-                letterSpacing: "0.15em",
-                fontWeight: 700,
-                boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
-              }}
-            >
-              {copy.cta} →
-            </div>
+            <div style={{
+              marginLeft: "auto",
+              border: "2px solid rgba(255,255,255,0.6)",
+              borderRadius: 999, padding: "14px 32px",
+              color: "white", fontFamily: "'Plus Jakarta Sans', sans-serif",
+              fontWeight: 600, fontSize: 22,
+            }}>{copy.cta || "Order Now"} →</div>
           </div>
         </div>
       </Frame>
     );
   }
 
+  /* ---------- STYLE 3: RUSTIC HANDMADE — Artisan Market ---------- */
   if (style === "Rustic Handmade") {
     return (
       <Frame>
-        {BgPhoto}
-        {/* Sepia warm overlay */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(180deg, rgba(101,67,33,0.25) 0%, rgba(101,67,33,0.45) 60%, rgba(60,40,20,0.7) 100%)",
-          }}
-        />
-        {/* Top label */}
-        <div
-          className="absolute"
-          style={{
-            top: 56,
-            left: 0,
-            right: 0,
-            textAlign: "center",
-            color: "rgba(255,245,225,0.95)",
-            fontFamily: "'Playfair Display', serif",
-            fontStyle: "italic",
-            fontSize: 28,
-            letterSpacing: "0.15em",
-            textShadow: "0 2px 12px rgba(0,0,0,0.6)",
-          }}
-        >
-          ~ handmade with love ~
-        </div>
-        {/* Torn paper band */}
-        <div
-          className="absolute"
-          style={{
-            left: 0,
-            right: 0,
-            bottom: 0,
-            height: 420,
-            background: "#F8F0DC",
-            clipPath:
-              "polygon(0 8%, 4% 4%, 9% 9%, 14% 3%, 20% 7%, 26% 2%, 32% 8%, 38% 4%, 44% 9%, 50% 3%, 56% 8%, 62% 4%, 68% 9%, 74% 3%, 80% 7%, 86% 4%, 92% 9%, 96% 5%, 100% 8%, 100% 100%, 0 100%)",
-            boxShadow: "0 -10px 30px rgba(0,0,0,0.25)",
-          }}
-        />
-        {/* Stamped circle */}
+        <img src={photo} alt="" crossOrigin="anonymous"
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover",
+            filter: "sepia(0.15) saturate(1.2) brightness(0.95)" }} />
+        {/* Top-left "Freshly Made" tag */}
+        <div style={{
+          position: "absolute", top: 48, left: 48,
+          background: "rgba(0,0,0,0.35)", color: "white",
+          padding: "8px 20px", borderRadius: 999,
+          fontFamily: "'Playfair Display', serif", fontStyle: "italic",
+          fontSize: 20,
+        }}>Freshly Made ♥</div>
+        {/* Torn paper cream band bottom 40% */}
+        <div className="absolute" style={{
+          left: 0, right: 0, bottom: 0, height: "42%",
+          background: "#FDFAF5",
+          filter: "drop-shadow(0 -6px 14px rgba(0,0,0,0.18))",
+          clipPath: "polygon(0% 18%, 2% 8%, 5% 15%, 9% 4%, 13% 16%, 18% 5%, 22% 17%, 27% 3%, 32% 15%, 37% 5%, 42% 18%, 47% 4%, 52% 16%, 57% 3%, 62% 15%, 67% 5%, 72% 18%, 77% 4%, 82% 15%, 87% 3%, 92% 16%, 96% 6%, 100% 14%, 100% 100%, 0% 100%)",
+        }} />
+        {/* Stamp circle for price */}
         {copy.price && (
-          <div
-            className="absolute"
-            style={{
-              right: 70,
-              bottom: 290,
-              width: 170,
-              height: 170,
-              borderRadius: "50%",
-              border: "4px double #5C3A1E",
-              color: "#5C3A1E",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              fontFamily: "'Playfair Display', serif",
-              transform: "rotate(-8deg)",
-              background: "rgba(248,240,220,0.85)",
-            }}
-          >
-            <div style={{ fontSize: 14, letterSpacing: "0.3em", marginBottom: 4 }}>ONLY</div>
-            <div style={{ fontSize: 38, fontWeight: 700, lineHeight: 1 }}>{copy.price}</div>
-          </div>
+          <div style={{
+            position: "absolute", right: 64, bottom: 80,
+            width: 140, height: 140, borderRadius: "50%",
+            border: "3px solid #8B5A2B",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            color: "#8B5A2B", fontFamily: "'Plus Jakarta Sans', sans-serif",
+            fontWeight: 800, fontSize: 30, transform: "rotate(-7deg)",
+            background: "rgba(253,250,245,0.6)",
+          }}>{copy.price}</div>
         )}
-        {/* Headline on band */}
-        <div
-          className="absolute"
-          style={{
-            left: 70,
-            right: 70,
-            bottom: 180,
-            color: "#3D2410",
-            textAlign: "center",
-          }}
-        >
-          <div
-            style={{
-              fontFamily: "'Playfair Display', serif",
-              fontWeight: 700,
-              fontSize: 96,
-              lineHeight: 1,
-              letterSpacing: "-0.01em",
-            }}
-          >
-            {copy.headline}
-          </div>
+        {/* Cream band content */}
+        <div className="absolute" style={{
+          left: 64, right: copy.price ? 240 : 64, bottom: 100, color: "#2C1810",
+        }}>
+          <div style={{
+            fontFamily: "'Plus Jakarta Sans', sans-serif",
+            fontSize: 20, color: "#8B6914", letterSpacing: "0.3em",
+            marginBottom: 18, textTransform: "uppercase",
+          }}>✦ homemade ✦</div>
+          <div style={{
+            fontFamily: "'Playfair Display', serif", fontStyle: "italic",
+            fontWeight: 700, fontSize: 76, lineHeight: 1.1, color: "#2C1810",
+          }}>{copy.headline}</div>
           {copy.tagline && (
-            <div
-              style={{
-                fontFamily: "'Playfair Display', serif",
-                fontStyle: "italic",
-                fontSize: 28,
-                color: "#6B4A2B",
-                marginTop: 16,
-              }}
-            >
-              {copy.tagline}
-            </div>
+            <div style={{
+              fontFamily: "'Playfair Display', serif", fontStyle: "italic",
+              fontSize: 28, color: "#7A5C45", marginTop: 18,
+            }}>{copy.tagline}</div>
           )}
-          <div
-            style={{
-              marginTop: 24,
-              display: "inline-block",
-              border: "2px solid #5C3A1E",
-              padding: "12px 32px",
-              fontFamily: "'Playfair Display', serif",
-              fontSize: 22,
-              letterSpacing: "0.3em",
-              textTransform: "uppercase",
-              color: "#5C3A1E",
-            }}
-          >
-            {copy.cta}
-          </div>
         </div>
       </Frame>
     );
   }
 
-  // Flash Sale
+  /* ---------- STYLE 4: FLASH SALE — Shopee 12.12 Energy ---------- */
   return (
     <Frame>
       {BgPhoto}
-      {/* Aggressive dark overlay */}
-      <div className="absolute inset-0" style={{ background: `rgba(0,0,0,${0.5 + dim * 0.3})` }} />
-      <div
-        className="absolute inset-0"
-        style={{
-          background:
-            "linear-gradient(180deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.2) 40%, rgba(0,0,0,0.85) 100%)",
-        }}
-      />
-      {/* Diagonal SALE banner */}
-      <div
-        className="absolute"
-        style={{
-          top: 90,
-          left: -120,
-          width: 600,
-          padding: "22px 0",
-          background: "#FFE000",
-          color: "#0a0a0a",
-          textAlign: "center",
-          fontFamily: "'Anton', sans-serif",
-          fontSize: 64,
-          letterSpacing: "0.1em",
-          transform: "rotate(-25deg)",
-          boxShadow: "0 10px 40px rgba(0,0,0,0.5)",
-        }}
-      >
-        ⚡ FLASH DEAL
+      <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.72)" }} />
+      {/* Diagonal FLASH SALE corner banner */}
+      <div style={{
+        position: "absolute", top: 60, left: -100, width: 380,
+        background: "#FF0000", color: "white",
+        padding: "16px 0", textAlign: "center",
+        fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800,
+        fontSize: 22, letterSpacing: "0.3em",
+        transform: "rotate(-45deg)", transformOrigin: "center",
+        boxShadow: "0 8px 28px rgba(0,0,0,0.5)",
+      }}>
+        <div>FLASH</div>
+        <div>SALE</div>
       </div>
-      {/* Bottom content */}
-      <div className="absolute" style={{ left: 56, right: 56, bottom: 120, color: "white" }}>
-        <div
-          style={{
-            fontFamily: "'Anton', sans-serif",
-            fontWeight: 900,
-            fontSize: 130,
-            lineHeight: 0.9,
-            textTransform: "uppercase",
-            textShadow: "0 4px 20px rgba(0,0,0,0.8)",
-            letterSpacing: "-0.01em",
-          }}
-        >
-          {copy.headline}
-        </div>
+      {/* Center stacked text */}
+      <div className="absolute" style={{
+        left: 0, right: 0, top: "50%", transform: "translateY(-55%)",
+        textAlign: "center", color: "white", padding: "0 56px",
+      }}>
+        <div style={{
+          fontSize: 22, color: "#FFE000", textTransform: "uppercase",
+          letterSpacing: "0.5em", fontFamily: "'Plus Jakarta Sans', sans-serif",
+          marginBottom: 24,
+        }}>LIMITED TIME OFFER</div>
+        <div style={{
+          fontFamily: "'Anton', sans-serif", fontSize: 144,
+          color: "white", textTransform: "uppercase", lineHeight: 0.95,
+          letterSpacing: "-0.01em",
+          textShadow: "0 0 60px rgba(255,255,255,0.3), 0 4px 24px rgba(0,0,0,0.8)",
+        }}>{copy.headline}</div>
+        <div style={{
+          width: 80, height: 3, background: "#FF0000", margin: "32px auto",
+        }} />
         {copy.price && (
-          <div className="flex items-baseline gap-6" style={{ marginTop: 24 }}>
-            <div
-              style={{
-                fontFamily: "'DM Sans', sans-serif",
-                fontSize: 36,
-                color: "rgba(255,255,255,0.55)",
-                textDecoration: "line-through",
-              }}
-            >
-              was {fakeOriginal(copy.price)}
-            </div>
-            <div
-              style={{
-                fontFamily: "'Anton', sans-serif",
-                fontSize: 160,
-                color: "#FFE000",
-                lineHeight: 0.9,
-                textShadow: "0 0 30px rgba(255,224,0,0.6), 0 4px 20px rgba(0,0,0,0.8)",
-                animation: "pulseGlow 1.6s ease-in-out infinite",
-              }}
-            >
-              {copy.price}
-            </div>
-            <style>{`@keyframes pulseGlow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.2)}}`}</style>
-          </div>
+          <>
+            <div style={{
+              fontSize: 22, color: "rgba(255,255,255,0.5)", letterSpacing: "0.3em",
+              fontFamily: "'Plus Jakarta Sans', sans-serif", marginBottom: 8,
+            }}>WAS</div>
+            <div style={{
+              fontSize: 48, color: "rgba(255,255,255,0.6)",
+              textDecoration: "line-through", textDecorationColor: "#FF6B6B",
+              fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 600,
+              marginBottom: 12,
+            }}>{fakeOriginal(copy.price)}</div>
+            <div style={{
+              fontFamily: "'Anton', sans-serif", fontSize: 168,
+              color: "#FFE000", lineHeight: 0.9,
+              animation: "urgencyPulse 1.8s ease-in-out infinite",
+            }}>{copy.price}</div>
+            <style>{`@keyframes urgencyPulse{0%,100%{filter:drop-shadow(0 0 8px rgba(255,224,0,0.6));opacity:1}50%{filter:drop-shadow(0 0 20px rgba(255,224,0,0.9));opacity:.9}}`}</style>
+          </>
         )}
-        <div
-          className="text-center"
-          style={{
-            marginTop: 28,
-            background: "#FF0000",
-            color: "white",
-            padding: "22px 0",
-            borderRadius: 12,
-            fontFamily: "'Anton', sans-serif",
-            fontSize: 48,
-            letterSpacing: "0.15em",
-            textTransform: "uppercase",
-            boxShadow: "0 10px 30px rgba(255,0,0,0.5)",
-          }}
-        >
-          Order Now ⚡
-        </div>
       </div>
+      {/* Bottom CTA bar */}
+      <div style={{
+        position: "absolute", left: 0, right: 0, bottom: 0,
+        background: "#FF0000", color: "white",
+        height: 88, display: "flex", alignItems: "center", justifyContent: "center",
+        fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800,
+        fontSize: 28, letterSpacing: "0.18em", textTransform: "uppercase",
+      }}>⚡ Order Now — While Stocks Last</div>
     </Frame>
   );
 }
@@ -1095,7 +882,7 @@ function fakeOriginal(price: string): string {
   if (!m) return price;
   const num = parseFloat(m[2].replace(/,/g, ""));
   if (!isFinite(num) || num <= 0) return price;
-  const inflated = (num * 1.3).toFixed(num >= 10 ? 0 : 2);
+  const inflated = (num * 1.35).toFixed(num >= 10 ? 0 : 2);
   return `${m[1]}${inflated}${m[3]}`;
 }
 
