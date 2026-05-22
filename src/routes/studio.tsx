@@ -375,17 +375,21 @@ function PosterTab() {
   }
 
   async function downloadAsImage() {
-    const element = document.getElementById("poster-canvas-container");
+    const element =
+      document.getElementById("poster-download-target") ||
+      document.getElementById("poster-canvas-container");
     if (!element) return;
     setDownloadState("loading");
     try {
+      // Let fonts/images settle before capture
+      await new Promise((r) => setTimeout(r, 300));
       const canvas = await html2canvas(element as HTMLElement, {
         scale: 3,
         useCORS: true,
         allowTaint: true,
         backgroundColor: null,
         logging: false,
-        imageTimeout: 15000,
+        imageTimeout: 30000,
       });
       const link = document.createElement("a");
       const slug = (product || "poster").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "poster";
@@ -559,7 +563,7 @@ const ScaledPoster = ({ style, copy, imgUrl, product, seed, ref }: {
   return (
     <div ref={wrapRef} className="w-full" style={{ aspectRatio: "1 / 1" }}>
       <div style={{ width: 1080, height: 1080, transform: `scale(${scale})`, transformOrigin: "top left" }}>
-        <div id="poster-canvas-container" ref={ref} style={{ width: 1080, height: 1080 }}>
+        <div id="poster-download-target" ref={ref} style={{ width: 1080, height: 1080 }}>
           <PosterPreview style={style} copy={copy} imgUrl={imgUrl} product={product} seed={seed} />
         </div>
       </div>
