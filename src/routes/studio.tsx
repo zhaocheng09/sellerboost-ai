@@ -381,15 +381,50 @@ function PosterTab() {
     if (!element) return;
     setDownloadState("loading");
     try {
-      // Let fonts/images settle before capture
-      await new Promise((r) => setTimeout(r, 300));
+      // Preload fonts so cloned doc renders with correct typography
+      try {
+        await document.fonts.ready;
+        const fontFaces = [
+          "700 80px 'Anton'",
+          "400 80px 'Bebas Neue'",
+          "700 80px 'Oswald'",
+          "700 80px 'Barlow Condensed'",
+          "800 80px 'Plus Jakarta Sans'",
+          "700 80px 'Playfair Display'",
+        ];
+        await Promise.all(fontFaces.map((f) => (document as any).fonts.load(f).catch(() => {})));
+      } catch {}
+      // Let images settle
+      await new Promise((r) => setTimeout(r, 500));
       const canvas = await html2canvas(element as HTMLElement, {
-        scale: 3,
+        scale: 2,
         useCORS: true,
         allowTaint: true,
-        backgroundColor: null,
+        backgroundColor: "#ffffff",
         logging: false,
         imageTimeout: 30000,
+        onclone: async (clonedDoc, clonedElement) => {
+          try { await (clonedDoc as any).fonts.ready; } catch {}
+          const all = clonedElement.querySelectorAll<HTMLElement>("*");
+          all.forEach((el) => {
+            el.style.backdropFilter = "none";
+            (el.style as any).webkitBackdropFilter = "none";
+            el.style.transition = "none";
+            el.style.animation = "none";
+          });
+          (clonedElement as HTMLElement).style.borderRadius = "0px";
+          (clonedElement as HTMLElement).style.overflow = "visible";
+          const imgs = clonedElement.querySelectorAll("img");
+          await Promise.all(Array.from(imgs).map((img) => {
+            if (img.complete && img.naturalHeight !== 0) return Promise.resolve();
+            return new Promise<void>((resolve) => {
+              img.onload = () => resolve();
+              img.onerror = () => resolve();
+              setTimeout(() => resolve(), 5000);
+            });
+          }));
+          await new Promise((r) => setTimeout(r, 300));
+        },
       });
       const link = document.createElement("a");
       const slug = (product || "poster").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "poster";
