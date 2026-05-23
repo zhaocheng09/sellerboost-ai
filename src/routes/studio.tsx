@@ -514,18 +514,15 @@ function PosterTab() {
       )}
 
       {copy && !loading && (
-        <div className="space-y-3">
-          <div key={shuffleKey} className="w-full max-w-sm mx-auto poster-fade-in">
+        <div className="w-full max-w-sm mx-auto flex flex-col gap-2">
+          <div key={shuffleKey} className="poster-fade-in">
             <ScaledPoster ref={posterRef} style={style} copy={copy} imgUrl={imgUrl} product={product} seed={seed} />
-          </div>
-          <div className="text-center text-[11px] text-muted-foreground -mt-1">
-            ✦ Generated variant #{variantNum}
           </div>
 
           <Button
             onClick={downloadAsImage}
             disabled={downloadState === "loading"}
-            className="w-full max-w-sm mx-auto flex h-12 font-semibold rounded-xl text-[15px] text-white"
+            className="w-full flex h-12 font-semibold rounded-xl text-[15px] text-white"
             style={{
               borderRadius: 12,
               background:
@@ -543,7 +540,7 @@ function PosterTab() {
             )}
           </Button>
 
-          <div className="grid grid-cols-2 gap-2 max-w-sm mx-auto">
+          <div className="grid grid-cols-2 gap-2">
             <Button variant="outline" onClick={generate} disabled={loading}
               className="h-11 border-[#059669] text-[#059669] hover:bg-[#D1FAE5] hover:text-[#065F46]">
               <RefreshCw className="h-4 w-4 mr-2" /> 🔄 Regenerate
@@ -563,6 +560,10 @@ function PosterTab() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+
+          <p className="text-center text-[11px] text-muted-foreground m-0">
+            ✦ Generated variant #{variantNum}
+          </p>
 
           <style>{`.poster-fade-in{animation:posterFadeIn 300ms ease-out}@keyframes posterFadeIn{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}`}</style>
         </div>
