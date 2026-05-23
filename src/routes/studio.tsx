@@ -727,7 +727,7 @@ function PosterPreview({ style, copy, imgUrl, product, seed }: {
               borderRadius: 999, padding: "16px 40px",
               color: "white", fontSize: 30, fontWeight: 700,
               fontFamily: "'Plus Jakarta Sans', sans-serif", textShadow: TEXT_SHADOW,
-            }}>{copy.price}</div>
+            }} data-fix="remove-blur">{copy.price}</div>
           )}
         </div>
         {/* Decorative ✦ bottom right */}
@@ -814,7 +814,7 @@ function PosterPreview({ style, copy, imgUrl, product, seed }: {
           fontSize: 20,
         }}>Freshly Made ♥</div>
         {/* Torn paper cream band bottom 40% */}
-        <div className="absolute" style={{
+        <div data-fix="remove-clip" className="absolute" style={{
           left: 0, right: 0, bottom: 0, height: "42%",
           background: "#FDFAF5",
           filter: "drop-shadow(0 -6px 14px rgba(0,0,0,0.18))",
