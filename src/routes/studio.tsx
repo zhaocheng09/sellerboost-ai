@@ -381,15 +381,50 @@ function PosterTab() {
     if (!element) return;
     setDownloadState("loading");
     try {
-      // Let fonts/images settle before capture
-      await new Promise((r) => setTimeout(r, 300));
+      // Preload fonts so cloned doc renders with correct typography
+      try {
+        await document.fonts.ready;
+        const fontFaces = [
+          "700 80px 'Anton'",
+          "400 80px 'Bebas Neue'",
+          "700 80px 'Oswald'",
+          "700 80px 'Barlow Condensed'",
+          "800 80px 'Plus Jakarta Sans'",
+          "700 80px 'Playfair Display'",
+        ];
+        await Promise.all(fontFaces.map((f) => (document as any).fonts.load(f).catch(() => {})));
+      } catch {}
+      // Let images settle
+      await new Promise((r) => setTimeout(r, 500));
       const canvas = await html2canvas(element as HTMLElement, {
-        scale: 3,
+        scale: 2,
         useCORS: true,
         allowTaint: true,
-        backgroundColor: null,
+        backgroundColor: "#ffffff",
         logging: false,
         imageTimeout: 30000,
+        onclone: async (clonedDoc, clonedElement) => {
+          try { await (clonedDoc as any).fonts.ready; } catch {}
+          const all = clonedElement.querySelectorAll<HTMLElement>("*");
+          all.forEach((el) => {
+            el.style.backdropFilter = "none";
+            (el.style as any).webkitBackdropFilter = "none";
+            el.style.transition = "none";
+            el.style.animation = "none";
+          });
+          (clonedElement as HTMLElement).style.borderRadius = "0px";
+          (clonedElement as HTMLElement).style.overflow = "visible";
+          const imgs = clonedElement.querySelectorAll("img");
+          await Promise.all(Array.from(imgs).map((img) => {
+            if (img.complete && img.naturalHeight !== 0) return Promise.resolve();
+            return new Promise<void>((resolve) => {
+              img.onload = () => resolve();
+              img.onerror = () => resolve();
+              setTimeout(() => resolve(), 5000);
+            });
+          }));
+          await new Promise((r) => setTimeout(r, 300));
+        },
       });
       const link = document.createElement("a");
       const slug = (product || "poster").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "poster";
@@ -479,18 +514,15 @@ function PosterTab() {
       )}
 
       {copy && !loading && (
-        <div className="space-y-3">
-          <div key={shuffleKey} className="w-full max-w-sm mx-auto poster-fade-in">
+        <div className="w-full max-w-sm mx-auto flex flex-col gap-2">
+          <div key={shuffleKey} className="poster-fade-in">
             <ScaledPoster ref={posterRef} style={style} copy={copy} imgUrl={imgUrl} product={product} seed={seed} />
-          </div>
-          <div className="text-center text-[11px] text-muted-foreground -mt-1">
-            ✦ Generated variant #{variantNum}
           </div>
 
           <Button
             onClick={downloadAsImage}
             disabled={downloadState === "loading"}
-            className="w-full max-w-sm mx-auto flex h-12 font-semibold rounded-xl text-[15px] text-white"
+            className="w-full flex h-12 font-semibold rounded-xl text-[15px] text-white"
             style={{
               borderRadius: 12,
               background:
@@ -508,7 +540,7 @@ function PosterTab() {
             )}
           </Button>
 
-          <div className="grid grid-cols-2 gap-2 max-w-sm mx-auto">
+          <div className="grid grid-cols-2 gap-2">
             <Button variant="outline" onClick={generate} disabled={loading}
               className="h-11 border-[#059669] text-[#059669] hover:bg-[#D1FAE5] hover:text-[#065F46]">
               <RefreshCw className="h-4 w-4 mr-2" /> 🔄 Regenerate
@@ -528,6 +560,10 @@ function PosterTab() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+
+          <p className="text-center text-[11px] text-muted-foreground m-0">
+            ✦ Generated variant #{variantNum}
+          </p>
 
           <style>{`.poster-fade-in{animation:posterFadeIn 300ms ease-out}@keyframes posterFadeIn{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}`}</style>
         </div>
