@@ -411,6 +411,15 @@ function PosterTab() {
             (el.style as any).webkitBackdropFilter = "none";
             el.style.transition = "none";
             el.style.animation = "none";
+            (el.style as any).animationDuration = "0s";
+            // Strip clip-path globally — html2canvas mis-renders complex clips
+            el.style.clipPath = "none";
+            (el.style as any).webkitClipPath = "none";
+          });
+          // Restore a solid bg where blur badges relied on backdrop-filter
+          clonedElement.querySelectorAll<HTMLElement>('[data-fix="remove-blur"]').forEach((el) => {
+            el.style.backgroundColor = "rgba(255,255,255,0.3)";
+            el.style.border = "1px solid rgba(255,255,255,0.5)";
           });
           (clonedElement as HTMLElement).style.borderRadius = "0px";
           (clonedElement as HTMLElement).style.overflow = "visible";
@@ -597,9 +606,9 @@ const ScaledPoster = ({ style, copy, imgUrl, product, seed, ref }: {
     return () => window.removeEventListener("resize", update);
   }, []);
   return (
-    <div ref={wrapRef} className="w-full" style={{ aspectRatio: "1 / 1" }}>
-      <div style={{ width: 1080, height: 1080, transform: `scale(${scale})`, transformOrigin: "top left" }}>
-        <div id="poster-download-target" ref={ref} style={{ width: 1080, height: 1080 }}>
+    <div ref={wrapRef} className="w-full relative overflow-hidden" style={{ aspectRatio: "1 / 1", borderRadius: 16 }}>
+      <div style={{ width: 1080, height: 1080, transform: `scale(${scale})`, transformOrigin: "top left", position: "absolute", top: 0, left: 0 }}>
+        <div id="poster-download-target" data-fix="poster-root" ref={ref} style={{ width: 1080, height: 1080, position: "relative" }}>
           <PosterPreview style={style} copy={copy} imgUrl={imgUrl} product={product} seed={seed} />
         </div>
       </div>
@@ -718,7 +727,7 @@ function PosterPreview({ style, copy, imgUrl, product, seed }: {
               borderRadius: 999, padding: "16px 40px",
               color: "white", fontSize: 30, fontWeight: 700,
               fontFamily: "'Plus Jakarta Sans', sans-serif", textShadow: TEXT_SHADOW,
-            }}>{copy.price}</div>
+            }} data-fix="remove-blur">{copy.price}</div>
           )}
         </div>
         {/* Decorative ✦ bottom right */}
@@ -805,7 +814,7 @@ function PosterPreview({ style, copy, imgUrl, product, seed }: {
           fontSize: 20,
         }}>Freshly Made ♥</div>
         {/* Torn paper cream band bottom 40% */}
-        <div className="absolute" style={{
+        <div data-fix="remove-clip" className="absolute" style={{
           left: 0, right: 0, bottom: 0, height: "42%",
           background: "#FDFAF5",
           filter: "drop-shadow(0 -6px 14px rgba(0,0,0,0.18))",
