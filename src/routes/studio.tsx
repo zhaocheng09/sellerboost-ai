@@ -597,9 +597,9 @@ const ScaledPoster = ({ style, copy, imgUrl, product, seed, ref }: {
     return () => window.removeEventListener("resize", update);
   }, []);
   return (
-    <div ref={wrapRef} className="w-full" style={{ aspectRatio: "1 / 1" }}>
-      <div style={{ width: 1080, height: 1080, transform: `scale(${scale})`, transformOrigin: "top left" }}>
-        <div id="poster-download-target" ref={ref} style={{ width: 1080, height: 1080 }}>
+    <div ref={wrapRef} className="w-full relative overflow-hidden" style={{ aspectRatio: "1 / 1", borderRadius: 16 }}>
+      <div style={{ width: 1080, height: 1080, transform: `scale(${scale})`, transformOrigin: "top left", position: "absolute", top: 0, left: 0 }}>
+        <div id="poster-download-target" data-fix="poster-root" ref={ref} style={{ width: 1080, height: 1080, position: "relative" }}>
           <PosterPreview style={style} copy={copy} imgUrl={imgUrl} product={product} seed={seed} />
         </div>
       </div>
