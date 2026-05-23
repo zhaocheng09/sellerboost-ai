@@ -411,6 +411,15 @@ function PosterTab() {
             (el.style as any).webkitBackdropFilter = "none";
             el.style.transition = "none";
             el.style.animation = "none";
+            (el.style as any).animationDuration = "0s";
+            // Strip clip-path globally — html2canvas mis-renders complex clips
+            el.style.clipPath = "none";
+            (el.style as any).webkitClipPath = "none";
+          });
+          // Restore a solid bg where blur badges relied on backdrop-filter
+          clonedElement.querySelectorAll<HTMLElement>('[data-fix="remove-blur"]').forEach((el) => {
+            el.style.backgroundColor = "rgba(255,255,255,0.3)";
+            el.style.border = "1px solid rgba(255,255,255,0.5)";
           });
           (clonedElement as HTMLElement).style.borderRadius = "0px";
           (clonedElement as HTMLElement).style.overflow = "visible";
