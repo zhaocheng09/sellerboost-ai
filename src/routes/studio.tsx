@@ -723,37 +723,44 @@ function PosterPreview({ style, copy, imgUrl, product, seed }: {
           background: "#FDFAF5",
           filter: "drop-shadow(0 -6px 14px rgba(0,0,0,0.18))",
           clipPath: "polygon(0% 18%, 2% 8%, 5% 15%, 9% 4%, 13% 16%, 18% 5%, 22% 17%, 27% 3%, 32% 15%, 37% 5%, 42% 18%, 47% 4%, 52% 16%, 57% 3%, 62% 15%, 67% 5%, 72% 18%, 77% 4%, 82% 15%, 87% 3%, 92% 16%, 96% 6%, 100% 14%, 100% 100%, 0% 100%)",
-        }} />
-        {/* Stamp circle for price */}
-        {copy.price && (
-          <div style={{
-            position: "absolute", right: 64, bottom: 80,
-            width: 140, height: 140, borderRadius: "50%",
-            border: "3px solid #8B5A2B",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            color: "#8B5A2B", fontFamily: "'Plus Jakarta Sans', sans-serif",
-            fontWeight: 800, fontSize: 30, transform: "rotate(-7deg)",
-            background: "rgba(253,250,245,0.6)",
-          }}>{copy.price}</div>
-        )}
-        {/* Cream band content */}
-        <div className="absolute" style={{
-          left: 64, right: copy.price ? 240 : 64, bottom: 100, color: "#2C1810",
         }}>
+          {/* All text lives INSIDE the cream band so it can never overlap the zigzag edge */}
+          {/* HOMEMADE label — 28% from top of band, safely below the zigzag teeth (~18% max) */}
           <div style={{
+            position: "absolute", top: "28%", left: 64,
             fontFamily: "'Plus Jakarta Sans', sans-serif",
             fontSize: 20, color: "#8B6914", letterSpacing: "0.3em",
-            marginBottom: 18, textTransform: "uppercase",
+            fontWeight: 600, textTransform: "uppercase",
           }}>✦ homemade ✦</div>
+          {/* Product name */}
           <div style={{
+            position: "absolute", top: "38%", left: 64,
+            right: copy.price ? 240 : 64,
             fontFamily: "'Playfair Display', serif", fontStyle: "italic",
-            fontWeight: 700, fontSize: 76, lineHeight: 1.1, color: "#2C1810",
+            fontWeight: 700,
+            fontSize: copy.headline.length > 20 ? 60 : 76,
+            lineHeight: 1.1, color: "#2C1810",
           }}>{copy.headline}</div>
+          {/* Tagline */}
           {copy.tagline && (
             <div style={{
+              position: "absolute", top: "72%", left: 64,
+              right: copy.price ? 240 : 64,
               fontFamily: "'Playfair Display', serif", fontStyle: "italic",
-              fontSize: 28, color: "#7A5C45", marginTop: 18,
+              fontSize: 28, color: "#7A5C45",
             }}>{copy.tagline}</div>
+          )}
+          {/* Stamp circle for price — inside cream band so it stays on the cream */}
+          {copy.price && (
+            <div style={{
+              position: "absolute", right: 64, bottom: 80,
+              width: 140, height: 140, borderRadius: "50%",
+              border: "3px solid #8B5A2B",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: "#8B5A2B", fontFamily: "'Plus Jakarta Sans', sans-serif",
+              fontWeight: 800, fontSize: 30, transform: "rotate(-7deg)",
+              background: "rgba(253,250,245,0.6)",
+            }}>{copy.price}</div>
           )}
         </div>
       </Frame>
