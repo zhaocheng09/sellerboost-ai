@@ -7,9 +7,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Copy, RefreshCw, Save, Sparkles, Upload, Download, Hash, MessageCircle, ChevronDown } from "lucide-react";
+import { Copy, RefreshCw, Save, Sparkles, Upload, Hash, MessageCircle, ChevronDown } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import html2canvas from "html2canvas-pro";
+
 import { toast } from "sonner";
 import { z } from "zod";
 import { callAI } from "@/lib/ai";
@@ -331,7 +331,7 @@ function PosterTab() {
   const [style, setStyle] = useState<PosterStyle>("Minimal Clean");
   const [copy, setCopy] = useState<PosterCopy | null>(null);
   const [loading, setLoading] = useState(false);
-  const [downloadState, setDownloadState] = useState<"idle" | "loading" | "success" | "error">("idle");
+
   const [seed, setSeed] = useState<number>(() => Date.now());
   const [shuffleKey, setShuffleKey] = useState(0);
   const [variantNum, setVariantNum] = useState<number>(() => Math.floor(Math.random() * 900) + 100);
@@ -374,82 +374,7 @@ function PosterTab() {
     }
   }
 
-  async function downloadAsImage() {
-    const element =
-      document.getElementById("poster-download-target") ||
-      document.getElementById("poster-canvas-container");
-    if (!element) return;
-    setDownloadState("loading");
-    try {
-      // Preload fonts so cloned doc renders with correct typography
-      try {
-        await document.fonts.ready;
-        const fontFaces = [
-          "700 80px 'Anton'",
-          "400 80px 'Bebas Neue'",
-          "700 80px 'Oswald'",
-          "700 80px 'Barlow Condensed'",
-          "800 80px 'Plus Jakarta Sans'",
-          "700 80px 'Playfair Display'",
-        ];
-        await Promise.all(fontFaces.map((f) => (document as any).fonts.load(f).catch(() => {})));
-      } catch {}
-      // Let images settle
-      await new Promise((r) => setTimeout(r, 500));
-      const canvas = await html2canvas(element as HTMLElement, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: "#ffffff",
-        logging: false,
-        imageTimeout: 30000,
-        onclone: async (clonedDoc, clonedElement) => {
-          try { await (clonedDoc as any).fonts.ready; } catch {}
-          const all = clonedElement.querySelectorAll<HTMLElement>("*");
-          all.forEach((el) => {
-            el.style.backdropFilter = "none";
-            (el.style as any).webkitBackdropFilter = "none";
-            el.style.transition = "none";
-            el.style.animation = "none";
-            (el.style as any).animationDuration = "0s";
-            // Strip clip-path globally — html2canvas mis-renders complex clips
-            el.style.clipPath = "none";
-            (el.style as any).webkitClipPath = "none";
-          });
-          // Restore a solid bg where blur badges relied on backdrop-filter
-          clonedElement.querySelectorAll<HTMLElement>('[data-fix="remove-blur"]').forEach((el) => {
-            el.style.backgroundColor = "rgba(255,255,255,0.3)";
-            el.style.border = "1px solid rgba(255,255,255,0.5)";
-          });
-          (clonedElement as HTMLElement).style.borderRadius = "0px";
-          (clonedElement as HTMLElement).style.overflow = "visible";
-          const imgs = clonedElement.querySelectorAll("img");
-          await Promise.all(Array.from(imgs).map((img) => {
-            if (img.complete && img.naturalHeight !== 0) return Promise.resolve();
-            return new Promise<void>((resolve) => {
-              img.onload = () => resolve();
-              img.onerror = () => resolve();
-              setTimeout(() => resolve(), 5000);
-            });
-          }));
-          await new Promise((r) => setTimeout(r, 300));
-        },
-      });
-      const link = document.createElement("a");
-      const slug = (product || "poster").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "poster";
-      link.download = `SellerAI-${slug}-${Date.now()}.png`;
-      link.href = canvas.toDataURL("image/png", 1.0);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      setDownloadState("success");
-      setTimeout(() => setDownloadState("idle"), 2000);
-    } catch (err) {
-      console.error(err);
-      setDownloadState("error");
-      setTimeout(() => setDownloadState("idle"), 2500);
-    }
-  }
+
 
   return (
     <div className="space-y-5">
@@ -527,27 +452,6 @@ function PosterTab() {
           <div key={shuffleKey} className="poster-fade-in">
             <ScaledPoster ref={posterRef} style={style} copy={copy} imgUrl={imgUrl} product={product} seed={seed} />
           </div>
-
-          <Button
-            onClick={downloadAsImage}
-            disabled={downloadState === "loading"}
-            className="w-full flex h-12 font-semibold rounded-xl text-[15px] text-white"
-            style={{
-              borderRadius: 12,
-              background:
-                downloadState === "error" ? "#DC2626"
-                : downloadState === "success" ? "#047857"
-                : downloadState === "loading" ? "#6B7280"
-                : "#059669",
-            }}
-          >
-            {downloadState === "loading" && <>⏳ Saving your poster...</>}
-            {downloadState === "success" && <>✅ Downloaded!</>}
-            {downloadState === "error" && <>Download failed — try again</>}
-            {downloadState === "idle" && (
-              <><Download className="h-4 w-4 mr-2" /> ⬇️ Download Poster</>
-            )}
-          </Button>
 
           <div className="grid grid-cols-2 gap-2">
             <Button variant="outline" onClick={generate} disabled={loading}
