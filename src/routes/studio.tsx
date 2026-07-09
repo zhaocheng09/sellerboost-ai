@@ -339,6 +339,7 @@ function PosterTab() {
   const fileRef = useRef<HTMLInputElement>(null);
   const posterRef = useRef<HTMLDivElement>(null);
   const loadingMsg = usePosterLoadingMsg(loading);
+  const [editorOpen, setEditorOpen] = useState(false);
 
   function handleFile(f: File | null) {
     if (!f) return;
