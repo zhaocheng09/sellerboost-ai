@@ -102,7 +102,7 @@ export function PosterEditor({ open, onClose, sourceEl, filename = "poster" }: P
     if (suppressHistoryRef.current) return;
     const c = fabricRef.current;
     if (!c) return;
-    const json = JSON.stringify(c.toJSON(["selectable", "evented"]));
+    const json = JSON.stringify(c.toJSON());
     const h = historyRef.current;
     h.splice(historyIdxRef.current + 1);
     h.push(json);
