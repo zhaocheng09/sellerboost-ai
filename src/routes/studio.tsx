@@ -455,6 +455,14 @@ function PosterTab() {
             <ScaledPoster ref={posterRef} style={style} copy={copy} imgUrl={imgUrl} product={product} seed={seed} />
           </div>
 
+          <Button
+            onClick={() => setEditorOpen(true)}
+            variant="outline"
+            className="h-11 w-full bg-white border-[1.5px] border-[#059669] text-[#059669] hover:bg-[#D1FAE5] hover:text-[#065F46]"
+          >
+            ✏️ Edit Poster
+          </Button>
+
           <div className="grid grid-cols-2 gap-2">
             <Button variant="outline" onClick={generate} disabled={loading}
               className="h-11 border-[#059669] text-[#059669] hover:bg-[#D1FAE5] hover:text-[#065F46]">
@@ -483,6 +491,12 @@ function PosterTab() {
           <style>{`.poster-fade-in{animation:posterFadeIn 300ms ease-out}@keyframes posterFadeIn{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}`}</style>
         </div>
       )}
+      <PosterEditor
+        open={editorOpen}
+        onClose={() => setEditorOpen(false)}
+        sourceEl={posterRef.current}
+        filename={product || "poster"}
+      />
     </div>
   );
 }
