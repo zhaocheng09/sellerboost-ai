@@ -15,6 +15,7 @@ import { z } from "zod";
 import { callAI } from "@/lib/ai";
 import { useLocalStorage, type ActivityItem, type BusinessProfile, defaultProfile } from "@/lib/storage";
 import { useT } from "@/lib/i18n";
+import { PosterEditor } from "@/components/PosterEditor";
 
 const searchSchema = z.object({
   tab: z.enum(["caption", "poster", "blast"]).optional(),
